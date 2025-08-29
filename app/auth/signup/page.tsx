@@ -35,7 +35,7 @@ function SignupForm() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !authLoading) {
-      console.log('🔧 [Signup] User already authenticated, redirecting to:', redirectTo)
+      // User already authenticated, redirecting
       window.location.href = redirectTo
     }
   }, [user, authLoading, redirectTo])
@@ -55,7 +55,7 @@ function SignupForm() {
     setError("")
     setSuccess("")
 
-    console.log('🔧 [Signup] Attempting signup with:', { email, password: '***' })
+    // Attempting signup
 
     // Validation
     if (!email || !password || !confirmPassword) {
@@ -79,7 +79,7 @@ function SignupForm() {
     try {
       const { error } = await signUp(email, password)
       
-      console.log('🔧 [Signup] SignUp result:', { error: error?.message || 'No error' })
+      // Processing signup result
       
       if (error) {
         setError(error.message || "Failed to create account")

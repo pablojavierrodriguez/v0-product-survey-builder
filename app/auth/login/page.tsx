@@ -28,7 +28,7 @@ function LoginForm() {
     setIsLoading(true)
     setError("")
 
-    console.log("🔧 [Login] Attempting login with:", { email, password: "***" })
+    // Attempting login
 
     // Validation
     if (!email || !password) {
@@ -40,17 +40,17 @@ function LoginForm() {
     try {
       const result = await signInWithPassword(email, password)
 
-      console.log("🔧 [Login] SignIn result:", { error: result?.error || "No error" })
+      // Processing login result
 
       if (result?.error) {
         setError(result.error)
         console.error("🔧 [Login] Login failed:", result.error)
       } else {
-        console.log("🔧 [Login] Login successful, waiting for auth state update...")
+        // Login successful, waiting for auth state update
 
         // Small delay to allow AuthProvider to update
         setTimeout(() => {
-          console.log("🔧 [Login] Redirecting to:", redirectTo)
+          // Redirecting after successful login
           router.push(redirectTo)
           router.refresh()
         }, 500)

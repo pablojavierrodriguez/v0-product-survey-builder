@@ -16,10 +16,7 @@ export function getSupabaseConfig(): DatabaseConfig {
   const supabaseUrl = envConfig.supabase.url || ""
   const anonKey = envConfig.supabase.anonKey || ""
 
-  console.log("🔧 Database Config - Supabase Config:", {
-    supabaseUrl: supabaseUrl ? "SET" : "EMPTY",
-    anonKey: anonKey ? "SET" : "EMPTY",
-  })
+  // Database Config - Supabase Config: supabaseUrl, anonKey status
 
   return {
     supabaseUrl,

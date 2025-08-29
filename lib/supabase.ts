@@ -40,7 +40,7 @@ export function getSupabaseClientSync() {
 }
 
 export async function clearSupabaseCache() {
-  console.log("🗑️ Supabase cache cleared")
+  // Supabase cache cleared
 }
 
 export async function requireSupabase() {

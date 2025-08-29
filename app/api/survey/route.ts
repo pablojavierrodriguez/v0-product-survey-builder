@@ -3,7 +3,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("📝 Survey submission started...")
+    // Survey submission started
 
     if (!isSupabaseConfigured) {
       console.error("❌ Supabase not configured")
@@ -30,11 +30,7 @@ export async function POST(request: NextRequest) {
 
     const { response_data, session_id, user_agent, ip_address } = body
 
-    console.log("📊 Received data:", {
-      hasResponseData: !!response_data,
-      sessionId: session_id,
-      userAgent: user_agent?.substring(0, 50) + "...",
-    })
+    // Received data: hasResponseData, sessionId, userAgent
 
     // Validate required fields
     if (!response_data) {
@@ -124,7 +120,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: `Database error: ${error.message}` }, { status: 500 })
     }
 
-    console.log("✅ Survey saved successfully:", data?.id)
+    // Survey saved successfully: data?.id
     return NextResponse.json({
       success: true,
       data,

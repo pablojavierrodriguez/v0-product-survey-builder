@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         } else {
-          console.log("🔐 [Auth] No valid session found - user not authenticated")
+          // Auth - No valid session found - user not authenticated
           if (mounted) {
             setSession(null)
             setUser(null)

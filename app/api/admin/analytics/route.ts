@@ -51,14 +51,14 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
 
     if (surveyError) {
-      console.log("[v0] Error fetching survey data:", surveyError)
+      // Error fetching survey data: surveyError
       return NextResponse.json(
         { success: false, error: `Error fetching survey data: ${surveyError.message}` },
         { status: 500 },
       )
     }
 
-    console.log("[v0] Survey data fetched:", surveyData?.length || 0, "records")
+    // Survey data fetched: surveyData?.length records
 
     const totalResponses = surveyData?.length || 0
     const today = new Date().toDateString()

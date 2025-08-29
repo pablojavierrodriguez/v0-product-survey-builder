@@ -50,13 +50,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "app_settings") {
-        console.log("Dashboard - Settings changed, refreshing data")
+        // Dashboard - Settings changed, refreshing data
         fetchDashboardData()
       }
     }
 
     const handleCustomStorageChange = () => {
-      console.log("Dashboard - Custom storage change detected, refreshing data")
+      // Dashboard - Custom storage change detected, refreshing data
       fetchDashboardData()
     }
 

@@ -55,7 +55,7 @@ export default function DatabasePage() {
 
   useEffect(() => {
     const handleSettingsChange = () => {
-      console.log('Settings changed, refreshing database info...')
+      // Settings changed, refreshing database info
       testConnection()
       fetchResponses()
     }

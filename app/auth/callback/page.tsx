@@ -11,7 +11,7 @@ export default function AuthCallback() {
     const handleAuthCallback = async () => {
       try {
         // Simplified - let AuthProvider handle the session
-        console.log('Auth callback, redirecting to dashboard')
+        // Auth callback, redirecting to dashboard
         router.push('/admin/dashboard')
       } catch (error) {
         console.error('Auth callback exception:', error)

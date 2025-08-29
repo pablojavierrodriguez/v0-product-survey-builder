@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         .limit(1)
       
       // If we can access app_settings, we have admin privileges
-      console.log('🔧 [Setup] Admin connection test successful')
+      // Setup - Admin connection test successful
       
       return NextResponse.json({
         success: true,

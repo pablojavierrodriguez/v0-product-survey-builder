@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     // Log seguro
     const targets = Array.isArray(savedTo) ? savedTo : [savedTo];
-    console.log(`✅ Configuration saved to: ${targets.join(", ")}`);
+    // Configuration saved to: targets
 
     return NextResponse.json({
       success: true,

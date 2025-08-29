@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v0] Debug: Starting config save test")
+    // Debug: Starting config save test
 
     if (!supabase) {
       return NextResponse.json({
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Test 1: Verificar conexión básica
     const { data: testData, error: testError } = await supabase.from("app_settings").select("*").limit(1)
 
-    console.log("[v0] Debug: Basic connection test", { testData, testError })
+    // Debug: Basic connection test - testData, testError
 
     if (testError) {
       return NextResponse.json({
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       .upsert(testConfig, { onConflict: "key" })
       .select()
 
-    console.log("[v0] Debug: Upsert test", { upsertData, upsertError })
+    // Debug: Upsert test - upsertData, upsertError
 
     return NextResponse.json({
       success: true,
