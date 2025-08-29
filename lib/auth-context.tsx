@@ -237,7 +237,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (!supabase) return { error: new Error("Supabase not configured") }
 
-      const { error } = await supabase.from("profiles").update(updates).eq("id", user?.id)
+      if (!user?.id) return { error: new Error("User not authenticated") }
+      
+      const { error } = await supabase.from("profiles").update(updates).eq("id", user.id)
 
       if (!error) {
         setProfile((prev) => (prev ? { ...prev, ...updates } : null))
