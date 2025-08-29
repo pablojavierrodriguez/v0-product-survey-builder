@@ -1,33 +1,53 @@
-// =====================================================================================
 // APPLICATION TYPES - Proper type definitions to replace 'any' usage
 // =====================================================================================
 
 import type { Database } from "./supabase"
 
+// Supabase types
+export interface SupabaseUser {
+  id: string
+  email?: string
+  [key: string]: unknown
+}
+
+export interface SupabaseSession {
+  access_token: string
+  user: SupabaseUser
+  [key: string]: unknown
+}
+
+export interface SupabaseAuthResponse {
+  data: { user: SupabaseUser | null; session: SupabaseSession | null }
+  error: Error | null
+}
+
 // Supabase client types
 export interface SupabaseClient {
-  from: (table: string) => any
+  from: (table: string) => SupabaseQueryBuilder
   auth: {
-    getUser: () => Promise<{ data: { user: any } | null; error: any }>
-    getSession: () => Promise<{ data: { session: any } | null; error: any }>
-    onAuthStateChange: (callback: (event: string, session: any) => void) => { data: { subscription: any } }
-    exchangeCodeForSession: (code: string) => Promise<any>
-    signInWithPassword: (credentials: { email: string; password: string }) => Promise<any>
-    signUp: (credentials: { email: string; password: string }) => Promise<any>
-    signInWithOAuth: (provider: { provider: string }) => Promise<any>
-    signOut: () => Promise<any>
+    getUser: () => Promise<{ data: { user: SupabaseUser } | null; error: Error | null }>
+    getSession: () => Promise<{ data: { session: SupabaseSession } | null; error: Error | null }>
+    onAuthStateChange: (callback: (event: string, session: SupabaseSession | null) => void) => { data: { subscription: { unsubscribe: () => void } } }
+    exchangeCodeForSession: (code: string) => Promise<SupabaseAuthResponse>
+    signInWithPassword: (credentials: { email: string; password: string }) => Promise<SupabaseAuthResponse>
+    signUp: (credentials: { email: string; password: string }) => Promise<SupabaseAuthResponse>
+    signInWithOAuth: (provider: { provider: string }) => Promise<SupabaseAuthResponse>
+    signOut: () => Promise<{ error: Error | null }>
   }
 }
 
 export interface SupabaseQueryBuilder {
   select: (columns?: string) => SupabaseQueryBuilder
-  insert: (data: any) => SupabaseQueryBuilder
-  upsert: (data: any) => SupabaseQueryBuilder
-  update: (data: any) => SupabaseQueryBuilder
+  insert: (data: Record<string, unknown>) => SupabaseQueryBuilder
+  upsert: (data: Record<string, unknown>) => SupabaseQueryBuilder
+  update: (data: Record<string, unknown>) => SupabaseQueryBuilder
   delete: () => SupabaseQueryBuilder
-  eq: (column: string, value: any) => SupabaseQueryBuilder
+  eq: (column: string, value: string | number | boolean) => SupabaseQueryBuilder
   limit: (count: number) => SupabaseQueryBuilder
-  then: (callback: (result: any) => void) => Promise<any>
+  single: () => SupabaseQueryBuilder
+  order: (column: string, options?: { ascending?: boolean }) => SupabaseQueryBuilder
+  range: (from: number, to: number) => SupabaseQueryBuilder
+  then: <T>(callback: (result: { data: T | null; error: Error | null; count?: number }) => void) => Promise<{ data: T | null; error: Error | null; count?: number }>
 }
 
 // Survey data types
@@ -56,16 +76,22 @@ export interface AppSettings {
   general: {
     maintenanceMode: boolean
     debugMode: boolean
-    [key: string]: any
+    [key: string]: string | number | boolean
   }
-  [key: string]: any
+  database?: {
+    url: string
+    apiKey: string
+    tableName: string
+    environment: string
+  }
+  [key: string]: Record<string, unknown> | undefined
 }
 
 // Auth context types
 export interface AuthContextType {
-  user: any | null
+  user: SupabaseUser | null
   profile: Database["public"]["Tables"]["profiles"]["Row"] | null
-  session: any | null
+  session: SupabaseSession | null
   loading: boolean
   userIsAdmin: boolean
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
@@ -78,7 +104,7 @@ export interface AuthContextType {
 }
 
 // API response types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string
@@ -86,7 +112,7 @@ export interface ApiResponse<T = any> {
 }
 
 // Database operation types
-export interface DatabaseOperationResult<T = any> {
+export interface DatabaseOperationResult<T = unknown> {
   success: boolean
   data?: T
   error?: string
@@ -102,5 +128,5 @@ export interface FormData {
 export interface AppError {
   message: string
   code?: string
-  details?: any
+  details?: Record<string, unknown>
 }

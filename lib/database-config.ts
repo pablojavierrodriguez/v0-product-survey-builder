@@ -24,7 +24,7 @@ export function getSupabaseConfig(): DatabaseConfig {
   return {
     supabaseUrl,
     anonKey,
-    tableName: (typeof process !== 'undefined' ? (process.env.NEXT_PUBLIC_DB_TABLE || "pc_survey_data_dev") : "pc_survey_data_dev"),
+    tableName: "survey_responses",
     environment: envConfig.app.environment || "production",
   }
 }
@@ -140,5 +140,5 @@ export async function ensureTableExists(tableName?: string): Promise<boolean> {
 
 // Ensure dev table exists
 export async function ensureDevTableExists(): Promise<boolean> {
-  return ensureTableExists("pc_survey_data_dev")
+  return ensureTableExists("survey_responses")
 }

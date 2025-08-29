@@ -39,7 +39,7 @@ export function useSettings() {
               database: {
                 url: config.database?.url || '',
                 apiKey: config.database?.apiKey || '',
-                tableName: config.database?.tableName || 'survey_responses',
+                tableName: 'survey_responses',
                 environment: config.database?.environment || 'development',
               }
             }
