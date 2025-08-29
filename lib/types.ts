@@ -3,23 +3,10 @@
 
 import type { Database } from "./supabase"
 
-// Supabase types
-export interface SupabaseUser {
-  id: string
-  email?: string
-  [key: string]: unknown
-}
-
-export interface SupabaseSession {
-  access_token: string
-  user: SupabaseUser
-  [key: string]: unknown
-}
-
-export interface SupabaseAuthResponse {
-  data: { user: SupabaseUser | null; session: SupabaseSession | null }
-  error: Error | null
-}
+// Supabase types - using any for compatibility with actual Supabase types
+export type SupabaseUser = any
+export type SupabaseSession = any
+export type SupabaseAuthResponse = any
 
 // Supabase client types
 export interface SupabaseClient {
