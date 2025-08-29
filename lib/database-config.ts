@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "./supabase"
-import { getSafeEnvironmentConfig } from "./env.client"
+import { getSafeEnvironmentConfig } from "./env"
 
 // Note: environment variables are accessed via centralized env config
 
