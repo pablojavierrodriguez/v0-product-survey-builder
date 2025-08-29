@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const task = (async (): Promise<Profile | null> => {
       let retryCount = 0
       const maxRetries = 3
-      const timeoutMs = 12000
+      const timeoutMs = 5000
       while (retryCount < maxRetries) {
         try {
           const { data, error } = await Promise.race([
@@ -43,10 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           retryCount++
           if (retryCount >= maxRetries) {
-            console.warn(`🔐 [Auth] Profile fetch gave up after ${retryCount} attempts (${label})`)
+            console.warn(`🔐 [Auth] Profile fetch failed after ${retryCount} attempts (${label}). User may need to refresh.`)
             return null
           }
-          await new Promise((r) => setTimeout(r, 1000 * retryCount))
+          const backoffDelay = Math.min(1000 * Math.pow(2, retryCount - 1), 3000)
+          await new Promise((r) => setTimeout(r, backoffDelay))
         }
       }
       return null
@@ -83,16 +84,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { data: { subscription } } = client.auth.onAuthStateChange(async (event: string, session: Session | null) => {
           if (!mounted) return
-          if (event !== 'TOKEN_REFRESHED' && event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION') return
-          if (!session?.user?.id) {
+          
+          // Handle sign out events
+          if (event === 'SIGNED_OUT' || !session?.user?.id) {
             setSession(null); setUser(null); setProfile(null)
             return
           }
-          setSession(session)
-          setUser(session.user)
-          const loadedProfile = await loadProfile(client, session.user.id, 'onAuthStateChange')
-          const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
-          if (mounted) setProfile(loadedProfile)
+          
+          // Only process relevant auth events
+          if (!['TOKEN_REFRESHED', 'SIGNED_IN', 'INITIAL_SESSION'].includes(event)) return
+          
+          try {
+            setSession(session)
+            setUser(session.user)
+            const loadedProfile = await loadProfile(client, session.user.id, `onAuthStateChange-${event}`)
+            if (mounted) setProfile(loadedProfile)
+          } catch (error) {
+            console.warn(`🔐 [Auth] Error handling auth state change (${event}):`, error)
+            // Don't clear session on profile load failure - user is still authenticated
+          }
         })
 
         // Do not clear tokens on init to avoid churn
@@ -115,12 +125,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mounted) {
             setSession(session)
             setUser(session.user)
-            const loadedProfile = await loadProfile(client, session.user.id, 'initialSession')
-            const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
-            if (mounted) setProfile(loadedProfile)
+            try {
+              const loadedProfile = await loadProfile(client, session.user.id, 'initialSession')
+              if (mounted) setProfile(loadedProfile)
+            } catch (error) {
+              console.warn('🔐 [Auth] Initial profile load failed:', error)
+              // Keep user authenticated even if profile fails to load
+            }
           }
         } else {
-          console.log("🔐 [Auth] No valid session found")
+          console.log("🔐 [Auth] No valid session found - user not authenticated")
           if (mounted) {
             setSession(null)
             setUser(null)
