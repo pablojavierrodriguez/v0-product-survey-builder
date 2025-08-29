@@ -223,7 +223,7 @@ export function validateEnvironment(): { isValid: boolean; hasWarnings: boolean 
   }
   
   if (config.validation.errors.length === 0 && config.validation.warnings.length === 0) {
-    console.log('✅ Environment configuration is valid')
+    // Environment configuration is valid
   }
   
   return {
@@ -238,11 +238,6 @@ export function validateEnvironment(): { isValid: boolean; hasWarnings: boolean 
 export function logEnvironmentStatus(): void {
   const config = getSafeEnvironmentConfig()
   
-  console.log('🔧 Environment Configuration Status:')
-  console.log(`  Supabase URL: ${config.supabase.url ? '✅ Set' : '❌ Missing'}`)
-  console.log(`  Supabase Anon Key: ${config.supabase.anonKey ? '✅ Set' : '❌ Missing'}`)
-  console.log(`  Supabase Service Role: ${config.supabase.serviceRoleKey ? '✅ Set' : '⚠️ Missing'}`)
-  console.log(`  App Environment: ${config.app.environment}`)
-  console.log(`  App Name: ${config.app.name}`)
-  console.log(`  Maintenance Mode: ${config.app.maintenanceMode ? '🔒 Enabled' : '🟢 Disabled'}`)
+  // Environment Configuration Status logged
+  // Supabase URL, Anon Key, Service Role, App Environment, App Name, Maintenance Mode
 }

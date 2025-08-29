@@ -196,7 +196,7 @@ export default function ProductSurvey() {
             const isDraft = parsedData._isDraft === true
             
             if (isStale) {
-              console.log("📊 Persisted data is stale, clearing...")
+              // Persisted data is stale, clearing
               localStorage.removeItem("survey_data")
               localStorage.removeItem("survey_step")
             } else if (isDraft) {
@@ -212,9 +212,9 @@ export default function ProductSurvey() {
                 setOtherTool(cleanData.other_tool)
               }
               
-              console.log("📊 Survey data restored from localStorage (draft)")
+              // Survey data restored from localStorage (draft)
             } else {
-              console.log("📊 Persisted data is not a draft, clearing...")
+              // Persisted data is not a draft, clearing
               localStorage.removeItem("survey_data")
               localStorage.removeItem("survey_step")
             }
@@ -231,7 +231,7 @@ export default function ProductSurvey() {
           const step = parseInt(persistedStep, 10)
           if (step >= 1 && step <= totalSteps) {
             setCurrentStep(step)
-            console.log("📊 Survey step restored:", step)
+            // Survey step restored
           }
         }
       }
@@ -299,7 +299,7 @@ export default function ProductSurvey() {
       if (typeof window !== "undefined") {
         localStorage.removeItem("survey_data")
         localStorage.removeItem("survey_step")
-        console.log("📊 Cleared persisted survey data")
+        // Cleared persisted survey data
       }
     } catch (error) {
       console.warn("Failed to clear persisted data:", error)
@@ -468,8 +468,7 @@ export default function ProductSurvey() {
     setError(null)
 
     try {
-      console.log("🚀 Starting survey submission...")
-      console.log("📊 Survey data:", surveyData)
+      // Starting survey submission
 
       const payload = {
         response_data: surveyData,
@@ -481,7 +480,7 @@ export default function ProductSurvey() {
         ip_address: null, // Will be handled server-side if needed
       }
 
-      console.log("📤 Sending payload:", payload)
+      // Sending payload to server
 
       // Store session ID for future reference
       if (typeof window !== "undefined" && window.sessionStorage) {
@@ -496,14 +495,13 @@ export default function ProductSurvey() {
         body: JSON.stringify(payload),
       })
 
-      console.log("📥 Response status:", response.status)
-      console.log("📥 Response ok:", response.ok)
+      // Response received
 
       const result = await response.json()
-      console.log("📥 Response data:", result)
+      // Processing response data
 
       if (response.ok && result.success) {
-        console.log("✅ Survey submitted successfully!")
+        // Survey submitted successfully
         setSubmitted(true)
         
         // Clear persisted draft data since survey is now submitted

@@ -112,7 +112,7 @@ export class ConfigManager {
       const configPath = path.join(process.cwd(), ".app-config.json")
 
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
-      console.log("✅ Configuration saved to local file")
+      // Configuration saved to local file
       return true
     } catch (error) {
       console.error("❌ Error saving local config:", error)
@@ -140,7 +140,7 @@ export class ConfigManager {
         return { success: false, savedTo: "none" }
       }
 
-      console.log("Config saved to database successfully")
+      // Config saved to database successfully
       return { success: true, savedTo: "database" }
     } catch (err) {
       console.error("Failed saveConfig:", err)
@@ -179,21 +179,21 @@ export class ConfigManager {
 
     let config = this.loadFromEnvironment()
     if (config) {
-      console.log("📋 Config loaded from environment variables")
+      // Config loaded from environment variables
       this.config = config
       return config
     }
 
     config = await this.loadFromLocalFile()
     if (config) {
-      console.log("📋 Config loaded from local file")
+      // Config loaded from local file
       this.config = config
       return config
     }
 
     config = await this.loadFromDatabase(bootstrapUrl, bootstrapKey)
     if (config) {
-      console.log("📋 Config loaded from database")
+      // Config loaded from database
       this.config = config
       return config
     }
