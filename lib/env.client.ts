@@ -70,4 +70,3 @@ export function getSafeEnvironmentConfig(): EnvironmentConfig {
     }
   }
 }
-

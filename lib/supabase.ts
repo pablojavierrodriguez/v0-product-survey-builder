@@ -10,7 +10,7 @@ export const supabase = (() => {
   if (!envConfig.supabase.isConfigured) {
     if (envConfig.validation.errors.length > 0) {
       console.warn("⚠️ Supabase not configured due to environment errors:")
-      envConfig.validation.errors.forEach(error => console.warn(`  - ${error}`))
+      envConfig.validation.errors.forEach((error) => console.warn(`  - ${error}`))
     }
     return null
   }

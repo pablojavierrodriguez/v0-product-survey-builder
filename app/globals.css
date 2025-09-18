@@ -174,5 +174,3 @@ body {
 .dark .text-foreground {
   color: hsl(var(--foreground));
 }
-
-
