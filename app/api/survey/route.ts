@@ -38,15 +38,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required survey fields
-    const requiredFields = ['role', 'seniority', 'company_type', 'company_size', 'industry', 'product_type', 'customer_segment', 'main_challenge']
-    const missingFields = requiredFields.filter(field => !response_data[field])
-    
+    const requiredFields = [
+      "role",
+      "seniority",
+      "company_type",
+      "company_size",
+      "industry",
+      "product_type",
+      "customer_segment",
+      "main_challenge",
+    ]
+    const missingFields = requiredFields.filter((field) => !response_data[field])
+
     if (missingFields.length > 0) {
       console.error("❌ Missing required fields:", missingFields)
-      return NextResponse.json({ 
-        success: false, 
-        error: `Missing required fields: ${missingFields.join(', ')}` 
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Missing required fields: ${missingFields.join(", ")}`,
+        },
+        { status: 400 },
+      )
     }
 
     // Validate arrays
@@ -65,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Validate salary values if provided
     const validateSalary = (value: any, fieldName: string) => {
-      if (value !== null && value !== undefined && value !== '') {
+      if (value !== null && value !== undefined && value !== "") {
         const num = Number.parseInt(value)
         if (isNaN(num) || num < 0) {
           throw new Error(`Invalid ${fieldName}: must be a positive number`)
@@ -77,16 +89,19 @@ export async function POST(request: NextRequest) {
 
     let salary_min, salary_max, salary_average
     try {
-      salary_min = validateSalary(response_data.salary_min, 'salary_min')
-      salary_max = validateSalary(response_data.salary_max, 'salary_max')
-      salary_average = validateSalary(response_data.salary_average, 'salary_average')
+      salary_min = validateSalary(response_data.salary_min, "salary_min")
+      salary_max = validateSalary(response_data.salary_max, "salary_max")
+      salary_average = validateSalary(response_data.salary_average, "salary_average")
     } catch (salaryError: any) {
       return NextResponse.json({ success: false, error: salaryError.message }, { status: 400 })
     }
 
     // Validate salary range logic
     if (salary_min && salary_max && salary_min > salary_max) {
-      return NextResponse.json({ success: false, error: "salary_min cannot be greater than salary_max" }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: "salary_min cannot be greater than salary_max" },
+        { status: 400 },
+      )
     }
 
     const normalizedData = {
@@ -117,7 +132,8 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("❌ Database insert error:", error)
-      return NextResponse.json({ success: false, error: `Database error: ${error.message}` }, { status: 500 })
+      const errorMessage = typeof error === "string" ? error : error.message || "Unknown database error"
+      return NextResponse.json({ success: false, error: `Database error: ${errorMessage}` }, { status: 500 })
     }
 
     // Survey saved successfully: data?.id
@@ -154,7 +170,8 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("❌ Database fetch error:", error)
-      return NextResponse.json({ success: false, error: `Error fetching responses: ${error.message}` }, { status: 500 })
+      const errorMessage = typeof error === "string" ? error : error.message || "Unknown database error"
+      return NextResponse.json({ success: false, error: `Error fetching responses: ${errorMessage}` }, { status: 500 })
     }
 
     return NextResponse.json({
