@@ -14,8 +14,6 @@ import { SurveySkeleton, ProgressIndicator, ErrorDisplay, LoadingOverlay } from 
 import { motion, AnimatePresence } from "framer-motion"
 import type { SurveyData, AppSettings } from "@/lib/types"
 
-
-
 const roleOptions = [
   "Product Manager",
   "Product Owner",
@@ -188,13 +186,13 @@ export default function ProductSurvey() {
         if (persistedData) {
           try {
             const parsedData = JSON.parse(persistedData)
-            
+
             // Check if data is stale (older than 24 hours)
-            const isStale = parsedData._lastModified && (Date.now() - parsedData._lastModified > 24 * 60 * 60 * 1000)
-            
+            const isStale = parsedData._lastModified && Date.now() - parsedData._lastModified > 24 * 60 * 60 * 1000
+
             // Check if data is marked as draft
             const isDraft = parsedData._isDraft === true
-            
+
             if (isStale) {
               // Persisted data is stale, clearing
               localStorage.removeItem("survey_data")
@@ -203,7 +201,7 @@ export default function ProductSurvey() {
               // Remove metadata before setting state
               const { _lastModified, _isDraft, ...cleanData } = parsedData
               setSurveyData(cleanData)
-              
+
               // Restore conditional inputs
               if (cleanData.other_role) {
                 setOtherRole(cleanData.other_role)
@@ -211,7 +209,7 @@ export default function ProductSurvey() {
               if (cleanData.other_tool) {
                 setOtherTool(cleanData.other_tool)
               }
-              
+
               // Survey data restored from localStorage (draft)
             } else {
               // Persisted data is not a draft, clearing
@@ -228,7 +226,7 @@ export default function ProductSurvey() {
         // Load persisted step
         const persistedStep = localStorage.getItem("survey_step")
         if (persistedStep) {
-          const step = parseInt(persistedStep, 10)
+          const step = Number.parseInt(persistedStep, 10)
           if (step >= 1 && step <= totalSteps) {
             setCurrentStep(step)
             // Survey step restored
@@ -274,7 +272,7 @@ export default function ProductSurvey() {
           ...data,
           // Add timestamp to detect stale data
           _lastModified: Date.now(),
-          _isDraft: true
+          _isDraft: true,
         }
         localStorage.setItem("survey_data", JSON.stringify(draftData))
       }
@@ -396,25 +394,39 @@ export default function ProductSurvey() {
         setOtherTool("")
       }
 
-      return { ...prev, daily_tools: next }
+      const newData = { ...prev, daily_tools: next }
+      persistSurveyData(newData)
+      return newData
     })
   }
 
   const handleLearningToggle = (method: string) => {
-    setSurveyData((prev) => ({
-      ...prev,
-      learning_methods: prev.learning_methods.includes(method)
-        ? prev.learning_methods.filter((m) => m !== method)
-        : [...prev.learning_methods, method],
-    }))
+    setSurveyData((prev) => {
+      const newData = {
+        ...prev,
+        learning_methods: prev.learning_methods.includes(method)
+          ? prev.learning_methods.filter((m) => m !== method)
+          : [...prev.learning_methods, method],
+      }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleEmailChange = (email: string) => {
-    setSurveyData((prev) => ({ ...prev, email }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, email }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleOtherToolChange = (other_tool: string) => {
-    setSurveyData((prev) => ({ ...prev, other_tool }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, other_tool }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const isValidEmail = (email: string) => {
@@ -503,10 +515,10 @@ export default function ProductSurvey() {
       if (response.ok && result.success) {
         // Survey submitted successfully
         setSubmitted(true)
-        
+
         // Clear persisted draft data since survey is now submitted
         clearPersistedData()
-        
+
         // Store success state for better UX
         if (typeof window !== "undefined" && window.sessionStorage) {
           window.sessionStorage.setItem("survey_completed", "true")
@@ -533,10 +545,10 @@ export default function ProductSurvey() {
       window.sessionStorage.removeItem("survey-completed")
       window.sessionStorage.removeItem("survey_session_id")
     }
-    
+
     // Clear localStorage data
     clearPersistedData()
-    
+
     setSubmitted(false)
     setOtherRole("")
     setOtherTool("")
@@ -612,44 +624,40 @@ export default function ProductSurvey() {
     switch (currentStep) {
       case 1:
         return (
-            <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-2xl mx-auto space-y-6"
-            >
+          >
             <SingleChoiceQuestion
-                question="What's your current role?"
-                options={roleOptions}
-                selectedValue={surveyData.role}
-                onSelect={(value) => {
-                  handleRoleSelect(value)
-                  if (value !== "Other") {
-                    handleAutoNext()
-                  }
-                }}
-                autoAdvance={false}
-                delay={500}
+              question="What's your current role?"
+              options={roleOptions}
+              selectedValue={surveyData.role}
+              onSelect={(value) => {
+                handleRoleSelect(value)
+                if (value !== "Other") {
+                  handleAutoNext()
+                }
+              }}
+              autoAdvance={false}
+              delay={500}
             />
 
             {surveyData.role === "Other" && (
-                <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-                >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                 <input
-                    type="text"
-                    placeholder="Please specify your role..."
-                    value={otherRole}
-                    onChange={(e) => handleOtherRoleChange(e.target.value)}
-                    className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+                  type="text"
+                  placeholder="Please specify your role..."
+                  value={otherRole}
+                  onChange={(e) => handleOtherRoleChange(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                     placeholder-gray-500 dark:placeholder-gray-400
                     focus:border-blue-500 focus:outline-none"
                 />
-                </motion.div>
+              </motion.div>
             )}
-            </motion.div>
+          </motion.div>
         )
 
       case 2:
@@ -723,14 +731,12 @@ export default function ProductSurvey() {
             question="What's your customer segment?"
             options={customerSegmentOptions}
             selectedValue={surveyData.customer_segment}
-            onSelect={(value) =>
-              setSurveyData((prev) => ({ ...prev, customer_segment: value }))
-            }
+            onSelect={(value) => setSurveyData((prev) => ({ ...prev, customer_segment: value }))}
             onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
-        );
+        )
 
       case 8:
         return (
@@ -757,78 +763,74 @@ export default function ProductSurvey() {
 
       case 9:
         const handleFinalNext = () => {
-            let tools = [...surveyData.daily_tools]
-            if (tools.includes("Other")) {
-            tools = tools.map(t => (t === "Other" ? otherTool : t))
-            }
-            setSurveyData(prev => ({ ...prev, daily_tools: tools }))
-            handleNext()
+          let tools = [...surveyData.daily_tools]
+          if (tools.includes("Other")) {
+            tools = tools.map((t) => (t === "Other" ? otherTool : t))
+          }
+          setSurveyData((prev) => ({ ...prev, daily_tools: tools }))
+          handleNext()
         }
 
         return (
-            <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-2xl mx-auto space-y-6"
-            >
+          >
             <motion.h2
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
             >
-                What tools do you use daily? (Select all that apply)
+              What tools do you use daily? (Select all that apply)
             </motion.h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {toolOptions.map((tool) => (
+              {toolOptions.map((tool) => (
                 <motion.button
-                    key={tool}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => handleToolToggle(tool)}
-                    className={`
+                  key={tool}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => handleToolToggle(tool)}
+                  className={`
                     p-3.5 sm:p-4 text-left rounded-xl border-2 transition-all duration-200
                     min-h-[52px] sm:min-h-[56px] flex items-center justify-between
                     ${
-                        surveyData.daily_tools.includes(tool)
+                      surveyData.daily_tools.includes(tool)
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm"
                         : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
                     }
                     `}
                 >
-                    <span className="text-sm sm:text-base font-medium pr-2">{tool}</span>
-                    {surveyData.daily_tools.includes(tool) && (
+                  <span className="text-sm sm:text-base font-medium pr-2">{tool}</span>
+                  {surveyData.daily_tools.includes(tool) && (
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    )}
+                  )}
                 </motion.button>
-                ))}
+              ))}
             </div>
 
             {surveyData.daily_tools.includes("Other") && (
-                <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-                >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                 <input
-                    type="text"
-                    placeholder="Please specify other tools..."
-                    value={otherTool}
-                    onChange={(e) => setOtherTool(e.target.value)}
-                    className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+                  type="text"
+                  placeholder="Please specify other tools..."
+                  value={otherTool}
+                  onChange={(e) => setOtherTool(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                     placeholder-gray-500 dark:placeholder-gray-400
                     focus:border-blue-500 focus:outline-none"
                 />
-                </motion.div>
+              </motion.div>
             )}
 
             <div className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
-                {surveyData.daily_tools.length} selected
+              {surveyData.daily_tools.length} selected
             </div>
 
             {/* Use global Continue; no local button here */}
-            </motion.div>
+          </motion.div>
         )
 
       case 10:
@@ -1022,36 +1024,28 @@ export default function ProductSurvey() {
       case 12:
         return (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-2xl mx-auto text-center space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
           >
-            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto shadow-lg">
-              <Check className="w-12 h-12 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Survey Completed!</h2>
-              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <p className="text-green-800 dark:text-green-200 font-medium">
-                  ✅ Your responses have been successfully saved
-                </p>
-              </div>
-            </div>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              Thank you for participating! Your responses help us build better products and create more valuable content
-              for the product community.
-              {surveyData.email && " We'll follow up with you soon."}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {userIsAdmin && (
-                <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
-                  View Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-              <Button variant="outline" onClick={restartSurvey} className="px-8 py-3 bg-transparent">
-                Take Survey Again
-              </Button>
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              Want to receive the survey results? (Optional)
+            </motion.h2>
+            <div className="max-w-lg mx-auto space-y-4">
+              <Input
+                type="email"
+                value={surveyData.email}
+                onChange={(e) => setSurveyData({ ...surveyData, email: e.target.value })}
+                placeholder="your.email@example.com"
+                className="text-lg p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+              />
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                We'll send you the aggregated results when the survey is complete. No spam, promise!
+              </p>
             </div>
           </motion.div>
         )
@@ -1098,7 +1092,9 @@ export default function ProductSurvey() {
             <div className="space-y-3">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Survey Completed!</h2>
               <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <p className="text-green-800 dark:text-green-200 font-medium">✅ Your responses have been successfully saved</p>
+                <p className="text-green-800 dark:text-green-200 font-medium">
+                  ✅ Your responses have been successfully saved
+                </p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
