@@ -84,8 +84,8 @@ export default function SettingsPage() {
   const canViewUsers = true
 
   try {
-    const local = typeof window !== 'undefined' ? localStorage.getItem('app_settings') : null
-    const debug = local ? (JSON.parse(local)?.general?.debugMode === true) : false
+    const local = typeof window !== "undefined" ? localStorage.getItem("app_settings") : null
+    const debug = local ? JSON.parse(local)?.general?.debugMode === true : false
     if (debug) {
       console.debug("[v0] Settings role:", userRole)
     }
@@ -243,7 +243,8 @@ export default function SettingsPage() {
         new StorageEvent("storage", {
           key: "app_settings",
           newValue: JSON.stringify(settings),
-          storageArea: localStorage,
+          oldValue: null,
+          url: window.location.href,
         }),
       )
 
