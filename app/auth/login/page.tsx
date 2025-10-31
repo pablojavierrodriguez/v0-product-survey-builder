@@ -21,16 +21,12 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get("redirect") || "/admin/dashboard"
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
 
-    // Attempting login
-
-    // Validation
     if (!email || !password) {
       setError("Please enter both email and password")
       setIsLoading(false)
@@ -40,27 +36,15 @@ function LoginForm() {
     try {
       const result = await signInWithPassword(email, password)
 
-      // Processing login result
-
       if (result?.error) {
         setError(result.error)
-        console.error("🔧 [Login] Login failed:", result.error)
-      } else {
-        // Login successful, waiting for auth state update
-
-        // Small delay to allow AuthProvider to update
-        setTimeout(() => {
-          // Redirecting after successful login
-          router.push(redirectTo)
-          router.refresh()
-        }, 500)
+        setIsLoading(false)
       }
+      // If no error, the server action will redirect automatically
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")
-      console.error("🔧 [Login] Login error:", error)
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (

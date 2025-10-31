@@ -50,8 +50,13 @@ export async function signInWithPassword(email: string, password: string) {
       return { error: "Login failed. Please check your credentials." }
     }
 
-    return { success: true }
-  } catch (error) {
+    // Server-side redirect after successful login
+    redirect("/admin/dashboard")
+  } catch (error: any) {
+    // If it's a redirect error, let it propagate
+    if (error?.message?.includes("NEXT_REDIRECT")) {
+      throw error
+    }
     console.error("[v0] Login exception:", error)
     return { error: "An unexpected error occurred. Please try again." }
   }

@@ -1,6 +1,5 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
-import type { Database } from "./lib/supabase"
 import { getSafeEnvironmentConfig } from "./lib/env"
 
 // Check if Supabase environment variables are available
@@ -15,10 +14,28 @@ export async function middleware(request: NextRequest) {
     })
   }
 
-  const res = NextResponse.next()
+  let response = NextResponse.next({
+    request,
+  })
 
-  // Create a Supabase client configured to use cookies
-  const supabase = createMiddlewareClient<Database>({ req: request, res })
+  const supabase = createServerClient(envConfig.supabase.url, envConfig.supabase.anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          request.cookies.set(name, value)
+        })
+        response = NextResponse.next({
+          request,
+        })
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options)
+        })
+      },
+    },
+  })
 
   // Check if this is an auth callback
   const requestUrl = new URL(request.url)
@@ -32,7 +49,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getSession()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   // Protected admin routes (UI and API) - redirect to login if not authenticated
   const isAdminRoute =
@@ -43,18 +62,14 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === "/auth/callback"
 
   if (isAdminRoute && !isAuthRoute) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
+    if (!user) {
       const redirectUrl = new URL("/auth/login", request.url)
       redirectUrl.searchParams.set("redirect", request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
     }
   }
 
-  return res
+  return response
 }
 
 export const config = {
