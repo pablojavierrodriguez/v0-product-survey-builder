@@ -43,6 +43,7 @@
     "@supabase/auth-helpers-nextjs": "latest",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
+    "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
