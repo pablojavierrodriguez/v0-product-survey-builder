@@ -140,22 +140,6 @@ function LoginForm() {
               </Button>
             </form>
 
-            {/* Sign Up Option */}
-            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-              <div className="text-center">
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Don't have an account?</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={() => router.push("/auth/signup")}
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Create Account
-                </Button>
-              </div>
-            </div>
-
             {/* Demo credentials for testing */}
             <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
@@ -163,9 +147,6 @@ function LoginForm() {
                 <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
                   <p>
                     <strong>Viewer Demo:</strong> viewer@demo.com / viewer123 (Read-only analytics)
-                  </p>
-                  <p>
-                    <strong>Admin Demo:</strong> admin-demo@demo.com / demo123 (Read-only admin panel)
                   </p>
                 </div>
               </div>
