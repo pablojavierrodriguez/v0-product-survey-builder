@@ -39,8 +39,11 @@ function LoginForm() {
       if (result?.error) {
         setError(result.error)
         setIsLoading(false)
+      } else if (result?.success) {
+        // Successful login - redirect to dashboard
+        router.push("/admin/dashboard")
+        router.refresh()
       }
-      // If no error, the server action will redirect automatically
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")
       setIsLoading(false)
