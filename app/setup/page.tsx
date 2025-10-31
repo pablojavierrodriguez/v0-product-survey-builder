@@ -356,7 +356,9 @@ export default function SetupPage() {
                           value={formData.adminEmail}
                           onChange={(e) => handleInputChange("adminEmail", e.target.value)}
                         />
-                        <p className="text-sm text-muted-foreground mt-1">Email del usuario administrador en Supabase</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Email del usuario administrador en Supabase
+                        </p>
                       </div>
 
                       <div>
