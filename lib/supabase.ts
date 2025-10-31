@@ -1,4 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient } from "@supabase/ssr"
 import { getSafeEnvironmentConfig } from "./env"
 
 // Get environment configuration
@@ -16,10 +16,7 @@ export const supabase = (() => {
   }
 
   try {
-    return createClientComponentClient({
-      supabaseUrl: envConfig.supabase.url!,
-      supabaseKey: envConfig.supabase.anonKey!,
-    })
+    return createBrowserClient(envConfig.supabase.url!, envConfig.supabase.anonKey!)
   } catch (error) {
     console.error("❌ Failed to create Supabase client:", error)
     return null

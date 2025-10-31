@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll()
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
+        cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value)
         })
         response = NextResponse.next({
@@ -37,18 +37,16 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // Check if this is an auth callback
+  await supabase.auth.getUser()
+
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
 
   if (code) {
-    // Exchange the code for a session
     await supabase.auth.exchangeCodeForSession(code)
-    // Redirect to admin dashboard after successful auth
     return NextResponse.redirect(new URL("/admin/dashboard", request.url))
   }
 
-  // Refresh session if expired - required for Server Components
   const {
     data: { user },
   } = await supabase.auth.getUser()
