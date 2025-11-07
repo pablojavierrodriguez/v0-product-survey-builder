@@ -10,12 +10,19 @@ const nextConfig = {
     unoptimized: true,
   },
   webpack: (config, { isServer }) => {
-    // Suppress Tailwind CSS color deprecation warnings
-    if (!isServer) {
-      config.infrastructureLogging = {
-        level: 'error',
-      }
+    config.infrastructureLogging = {
+      level: 'error',
     }
+    
+    // Ignore specific warnings
+    config.ignoreWarnings = [
+      /lightBlue/,
+      /warmGray/,
+      /trueGray/,
+      /coolGray/,
+      /blueGray/,
+    ]
+    
     return config
   },
   async headers() {

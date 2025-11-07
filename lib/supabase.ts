@@ -2,7 +2,7 @@ import { createBrowserClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 let supabaseInstance: SupabaseClient | null = null
-let isConfigured = false
+let isInitialized = false
 
 function getEnvVar(key: string): string | null {
   // Only access NEXT_PUBLIC_ variables on client
@@ -12,44 +12,46 @@ function getEnvVar(key: string): string | null {
   return process.env[key] || null
 }
 
-function initializeSupabase() {
+export function getSupabase(): SupabaseClient | null {
+  // Return existing instance if already created
   if (supabaseInstance) {
     return supabaseInstance
   }
+
+  // Only initialize once
+  if (isInitialized) {
+    return supabaseInstance
+  }
+
+  isInitialized = true
 
   const supabaseUrl = getEnvVar("NEXT_PUBLIC_SUPABASE_URL")
   const supabaseAnonKey = getEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY")
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    isConfigured = false
+    console.error("❌ Supabase environment variables missing")
     return null
   }
 
   try {
-    isConfigured = true
     supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
     return supabaseInstance
   } catch (error) {
     console.error("❌ Failed to create Supabase client:", error)
-    isConfigured = false
     return null
   }
 }
 
-export const supabase = initializeSupabase()
-export const isSupabaseConfigured = isConfigured
+export const supabase = getSupabase()
+export const isSupabaseConfigured = !!supabase
 
 // Legacy function for backward compatibility
 export async function getSupabaseClient() {
-  if (!isSupabaseConfigured) {
-    console.warn("⚠️ Supabase not configured. Please check environment variables.")
-    return null
-  }
-  return supabase
+  return getSupabase()
 }
 
 export function getSupabaseClientSync() {
-  return isSupabaseConfigured ? supabase : null
+  return getSupabase()
 }
 
 export async function clearSupabaseCache() {
@@ -57,7 +59,7 @@ export async function clearSupabaseCache() {
 }
 
 export async function requireSupabase() {
-  return isSupabaseConfigured
+  return !!getSupabase()
 }
 
 // Database types - updated to match new schema
