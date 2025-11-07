@@ -4,13 +4,13 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import type { Database } from "./supabase"
-import { getSafeEnvironmentConfig } from "./env"
 
 async function createSupabaseServerClient() {
-  const envConfig = getSafeEnvironmentConfig()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   const cookieStore = await cookies()
 
-  return createServerClient<Database>(envConfig.supabase.url || "", envConfig.supabase.anonKey || "", {
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()

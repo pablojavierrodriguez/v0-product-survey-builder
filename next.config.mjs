@@ -9,6 +9,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  webpack: (config, { isServer }) => {
+    // Suppress Tailwind CSS color deprecation warnings
+    if (!isServer) {
+      config.infrastructureLogging = {
+        level: 'error',
+      }
+    }
+    return config
+  },
   async headers() {
     return [
       {

@@ -7,14 +7,14 @@
  * These are the canonical names that should be used throughout the application.
  */
 export const ENV_VARS = {
-  SUPABASE_URL: 'NEXT_PUBLIC_SUPABASE_URL',
-  SUPABASE_ANON_KEY: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  SUPABASE_SERVICE_ROLE_KEY: 'SUPABASE_SERVICE_ROLE_KEY',
-  NODE_ENV: 'NODE_ENV',
-  APP_NAME: 'NEXT_PUBLIC_APP_NAME',
-  APP_URL: 'NEXT_PUBLIC_APP_URL',
-  MAINTENANCE_MODE: 'NEXT_PUBLIC_MAINTENANCE_MODE',
-  ANALYTICS_ENABLED: 'NEXT_PUBLIC_ANALYTICS_ENABLED',
+  SUPABASE_URL: "NEXT_PUBLIC_SUPABASE_URL",
+  SUPABASE_ANON_KEY: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  SUPABASE_SERVICE_ROLE_KEY: "SUPABASE_SERVICE_ROLE_KEY",
+  NODE_ENV: "NODE_ENV",
+  APP_NAME: "NEXT_PUBLIC_APP_NAME",
+  APP_URL: "NEXT_PUBLIC_APP_URL",
+  MAINTENANCE_MODE: "NEXT_PUBLIC_MAINTENANCE_MODE",
+  ANALYTICS_ENABLED: "NEXT_PUBLIC_ANALYTICS_ENABLED",
 } as const
 
 /**
@@ -22,11 +22,11 @@ export const ENV_VARS = {
  * These will be checked as fallbacks but should be migrated to standard names.
  */
 export const LEGACY_ENV_VARS = {
-  POSTGRES_SUPABASE_URL: 'POSTGRES_NEXT_PUBLIC_SUPABASE_URL',
-  POSTGRES_SUPABASE_ANON_KEY: 'POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  POSTGRES_SUPABASE_SERVICE_ROLE_KEY: 'POSTGRES_SUPABASE_SERVICE_ROLE_KEY',
-  POSTGRES_SUPABASE_URL_ALT: 'POSTGRES_SUPABASE_URL',
-  POSTGRES_SUPABASE_ANON_KEY_ALT: 'POSTGRES_SUPABASE_ANON_KEY',
+  POSTGRES_SUPABASE_URL: "POSTGRES_NEXT_PUBLIC_SUPABASE_URL",
+  POSTGRES_SUPABASE_ANON_KEY: "POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  POSTGRES_SUPABASE_SERVICE_ROLE_KEY: "POSTGRES_SUPABASE_SERVICE_ROLE_KEY",
+  POSTGRES_SUPABASE_URL_ALT: "POSTGRES_SUPABASE_URL",
+  POSTGRES_SUPABASE_ANON_KEY_ALT: "POSTGRES_SUPABASE_ANON_KEY",
 } as const
 
 export interface EnvironmentConfig {
@@ -51,9 +51,15 @@ export interface EnvironmentConfig {
 
 /**
  * Safely gets an environment variable with fallback support
+ * CLIENT-SAFE: Only returns NEXT_PUBLIC_ prefixed variables on the client
  */
 function getEnvVar(primaryKey: string, fallbackKeys: string[] = []): string | null {
+  const isClient = typeof window !== "undefined"
+
   // Check primary key first
+  if (isClient && !primaryKey.startsWith("NEXT_PUBLIC_")) {
+    return null
+  }
   const primaryValue = process.env[primaryKey]
   if (primaryValue && primaryValue.length > 0) {
     return primaryValue
@@ -61,6 +67,9 @@ function getEnvVar(primaryKey: string, fallbackKeys: string[] = []): string | nu
 
   // Check fallback keys
   for (const fallbackKey of fallbackKeys) {
+    if (isClient && !fallbackKey.startsWith("NEXT_PUBLIC_")) {
+      continue
+    }
     const fallbackValue = process.env[fallbackKey]
     if (fallbackValue && fallbackValue.length > 0) {
       return fallbackValue
@@ -74,7 +83,7 @@ function getEnvVar(primaryKey: string, fallbackKeys: string[] = []): string | nu
  * Validates that a value is a non-empty string
  */
 function isValidString(value: string | null): value is string {
-  return typeof value === 'string' && value.length > 0
+  return typeof value === "string" && value.length > 0
 }
 
 /**
@@ -128,7 +137,9 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 
   // Service role key is optional for basic functionality
   if (!isValidString(supabaseServiceRoleKey)) {
-    warnings.push(`Missing optional environment variable: ${ENV_VARS.SUPABASE_SERVICE_ROLE_KEY} (required for admin features)`)
+    warnings.push(
+      `Missing optional environment variable: ${ENV_VARS.SUPABASE_SERVICE_ROLE_KEY} (required for admin features)`,
+    )
   }
 
   // Check for legacy variables and warn about migration
@@ -141,17 +152,17 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 
   if (legacyVarsFound.length > 0) {
     warnings.push(
-      `Legacy environment variables detected: ${legacyVarsFound.join(', ')}. ` +
-      'Consider migrating to standard naming convention.'
+      `Legacy environment variables detected: ${legacyVarsFound.join(", ")}. ` +
+        "Consider migrating to standard naming convention.",
     )
   }
 
   // Get app configuration
-  const nodeEnv = getEnvVar(ENV_VARS.NODE_ENV) || 'development'
-  const appName = getEnvVar(ENV_VARS.APP_NAME) || 'Product Survey App'
-  const appUrl = getEnvVar(ENV_VARS.APP_URL) || 'http://localhost:3000'
-  const maintenanceMode = getEnvVar(ENV_VARS.MAINTENANCE_MODE) === 'true'
-  const analyticsEnabled = getEnvVar(ENV_VARS.ANALYTICS_ENABLED) !== 'false'
+  const nodeEnv = getEnvVar(ENV_VARS.NODE_ENV) || "development"
+  const appName = getEnvVar(ENV_VARS.APP_NAME) || "Product Survey App"
+  const appUrl = getEnvVar(ENV_VARS.APP_URL) || "http://localhost:3000"
+  const maintenanceMode = getEnvVar(ENV_VARS.MAINTENANCE_MODE) === "true"
+  const analyticsEnabled = getEnvVar(ENV_VARS.ANALYTICS_ENABLED) !== "false"
 
   const isSupabaseConfigured = isValidString(supabaseUrl) && isValidString(supabaseAnonKey)
 
@@ -183,7 +194,7 @@ export function getSafeEnvironmentConfig(): EnvironmentConfig {
   try {
     return getEnvironmentConfig()
   } catch (error) {
-    console.error('Error getting environment configuration:', error)
+    console.error("Error getting environment configuration:", error)
     return {
       supabase: {
         url: null,
@@ -192,14 +203,14 @@ export function getSafeEnvironmentConfig(): EnvironmentConfig {
         isConfigured: false,
       },
       app: {
-        name: 'Product Survey App',
-        url: 'http://localhost:3000',
-        environment: 'development',
+        name: "Product Survey App",
+        url: "http://localhost:3000",
+        environment: "development",
         maintenanceMode: false,
         analyticsEnabled: true,
       },
       validation: {
-        errors: ['Failed to load environment configuration'],
+        errors: ["Failed to load environment configuration"],
         warnings: [],
       },
     }
@@ -211,21 +222,21 @@ export function getSafeEnvironmentConfig(): EnvironmentConfig {
  */
 export function validateEnvironment(): { isValid: boolean; hasWarnings: boolean } {
   const config = getSafeEnvironmentConfig()
-  
+
   if (config.validation.errors.length > 0) {
-    console.error('❌ Environment Configuration Errors:')
-    config.validation.errors.forEach(error => console.error(`  - ${error}`))
+    console.error("❌ Environment Configuration Errors:")
+    config.validation.errors.forEach((error) => console.error(`  - ${error}`))
   }
-  
+
   if (config.validation.warnings.length > 0) {
-    console.warn('⚠️ Environment Configuration Warnings:')
-    config.validation.warnings.forEach(warning => console.warn(`  - ${warning}`))
+    console.warn("⚠️ Environment Configuration Warnings:")
+    config.validation.warnings.forEach((warning) => console.warn(`  - ${warning}`))
   }
-  
+
   if (config.validation.errors.length === 0 && config.validation.warnings.length === 0) {
     // Environment configuration is valid
   }
-  
+
   return {
     isValid: config.validation.errors.length === 0,
     hasWarnings: config.validation.warnings.length > 0,
@@ -237,7 +248,7 @@ export function validateEnvironment(): { isValid: boolean; hasWarnings: boolean 
  */
 export function logEnvironmentStatus(): void {
   const config = getSafeEnvironmentConfig()
-  
+
   // Environment Configuration Status logged
   // Supabase URL, Anon Key, Service Role, App Environment, App Name, Maintenance Mode
 }

@@ -1,14 +1,12 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
-import { getSafeEnvironmentConfig } from "./lib/env"
-
-// Check if Supabase environment variables are available
-const envConfig = getSafeEnvironmentConfig()
-const isSupabaseConfigured = envConfig.supabase.isConfigured
 
 export async function middleware(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
   // If Supabase is not configured, just continue without auth
-  if (!isSupabaseConfigured) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.next({
       request,
     })
@@ -18,7 +16,7 @@ export async function middleware(request: NextRequest) {
     request,
   })
 
-  const supabase = createServerClient(envConfig.supabase.url, envConfig.supabase.anonKey, {
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll()

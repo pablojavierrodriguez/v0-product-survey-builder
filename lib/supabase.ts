@@ -1,27 +1,43 @@
 import { createBrowserClient } from "@supabase/ssr"
-import { getSafeEnvironmentConfig } from "./env"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
-// Get environment configuration
-const envConfig = getSafeEnvironmentConfig()
+let supabaseInstance: SupabaseClient | null = null
+let isConfigured = false
 
-export const isSupabaseConfigured = envConfig.supabase.isConfigured
+function getEnvVar(key: string): string | null {
+  // Only access NEXT_PUBLIC_ variables on client
+  if (typeof window !== "undefined" && !key.startsWith("NEXT_PUBLIC_")) {
+    return null
+  }
+  return process.env[key] || null
+}
 
-export const supabase = (() => {
-  if (!envConfig.supabase.isConfigured) {
-    if (envConfig.validation.errors.length > 0) {
-      console.warn("⚠️ Supabase not configured due to environment errors:")
-      envConfig.validation.errors.forEach((error) => console.warn(`  - ${error}`))
-    }
+function initializeSupabase() {
+  if (supabaseInstance) {
+    return supabaseInstance
+  }
+
+  const supabaseUrl = getEnvVar("NEXT_PUBLIC_SUPABASE_URL")
+  const supabaseAnonKey = getEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    isConfigured = false
     return null
   }
 
   try {
-    return createBrowserClient(envConfig.supabase.url!, envConfig.supabase.anonKey!)
+    isConfigured = true
+    supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
+    return supabaseInstance
   } catch (error) {
     console.error("❌ Failed to create Supabase client:", error)
+    isConfigured = false
     return null
   }
-})()
+}
+
+export const supabase = initializeSupabase()
+export const isSupabaseConfigured = isConfigured
 
 // Legacy function for backward compatibility
 export async function getSupabaseClient() {
