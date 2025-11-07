@@ -1,65 +1,94 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import type { Database } from '@/lib/supabase'
-import { configManager } from '@/lib/config-manager'
-import { getUserRoleFromProfile } from '@/lib/permissions'
+import { type NextRequest, NextResponse } from "next/server"
+import { cookies } from "next/headers"
+import { createServerClient } from "@supabase/ssr"
+import type { Database } from "@/lib/supabase"
+import { configManager } from "@/lib/config-manager"
+import { getUserRoleFromProfile } from "@/lib/permissions"
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
-    const { data: { session } } = await supabase.auth.getSession()
+    const cookieStore = await cookies()
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          },
+        },
+      },
+    )
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
     // Get configuration from ConfigManager
     const config = await configManager.getConfig()
 
     if (!config) {
-      return NextResponse.json(
-        { success: false, error: 'System not configured' },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, error: "System not configured" }, { status: 404 })
     }
 
     return NextResponse.json({
       success: true,
       data: config,
       environment: config.database.environment,
-      source: 'config-manager'
+      source: "config-manager",
     })
-
   } catch (error) {
-    console.error('Settings API error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error("Settings API error:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
-    const { data: { session } } = await supabase.auth.getSession()
+    const cookieStore = await cookies()
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          },
+        },
+      },
+    )
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).limit(1).maybeSingle()
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .limit(1)
+      .maybeSingle()
     const role = getUserRoleFromProfile(profile || null, session.user.email)
-    if (role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+    if (role !== "admin") {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
     }
     // Parse request body
     const body = await request.json()
-    
+
     // Get current configuration
     const currentConfig = await configManager.getConfig()
     if (!currentConfig) {
-      return NextResponse.json(
-        { success: false, error: 'System not configured' },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, error: "System not configured" }, { status: 404 })
     }
 
     // Update configuration with new settings
@@ -67,35 +96,28 @@ export async function POST(request: NextRequest) {
       ...currentConfig,
       general: {
         ...currentConfig.general,
-        ...body.general
+        ...body.general,
       },
       database: {
         ...currentConfig.database,
-        ...body.database
-      }
+        ...body.database,
+      },
     }
 
     // Save updated configuration
     const { success, savedTo } = await configManager.saveConfig(updatedConfig)
 
     if (!success) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to save settings' },
-        { status: 500 }
-      )
+      return NextResponse.json({ success: false, error: "Failed to save settings" }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Settings updated successfully',
-      savedTo
+      message: "Settings updated successfully",
+      savedTo,
     })
-
   } catch (error) {
-    console.error('Settings update error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error("Settings update error:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

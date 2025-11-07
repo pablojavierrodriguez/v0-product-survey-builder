@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from "@supabase/ssr"
 import type { Database } from "@/lib/supabase"
 import { getUserRoleFromProfile } from "@/lib/permissions"
 
@@ -23,7 +23,22 @@ interface SurveyResponse {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          },
+        },
+      },
+    )
+
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -62,7 +77,8 @@ export async function GET(request: NextRequest) {
 
     const totalResponses = surveyData?.length || 0
     const today = new Date().toDateString()
-    const todayResponses = surveyData?.filter((r: SurveyResponse) => new Date(r.created_at).toDateString() === today).length || 0
+    const todayResponses =
+      surveyData?.filter((r: SurveyResponse) => new Date(r.created_at).toDateString() === today).length || 0
 
     // Initialize distributions
     const roleDistribution: { [key: string]: number } = {}
