@@ -1,42 +1,193 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+export const isSupabaseConfigured = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Check if Supabase is configured
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
+  return typeof url === "string" && url.length > 0 && typeof key === "string" && key.length > 0
+})()
 
-// Create Supabase client only if properly configured
-export const supabase = isSupabaseConfigured 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
+export const supabase = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Helper function to check if we can use Supabase features
-export function requireSupabase() {
-  if (!isSupabaseConfigured || !supabase) {
-    console.warn('Supabase not configured - falling back to demo mode')
-    return false
+  if (!url || !key) {
+    console.warn("⚠️ Supabase environment variables are not set. Please configure Supabase variables")
+    // Return a dummy client to prevent errors
+    return {
+      from: () => ({
+        select: () => Promise.resolve({ data: [], error: null }),
+        insert: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+        upsert: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+        update: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+        delete: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+      }),
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      },
+    } as any
   }
-  return true
+
+  return createClientComponentClient({
+    supabaseUrl: url,
+    supabaseKey: key,
+  })
+})()
+
+// Legacy function for backward compatibility
+export async function getSupabaseClient() {
+  if (!isSupabaseConfigured) {
+    console.warn(
+      "⚠️ Supabase environment variables are not set. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    )
+    return null
+  }
+  return supabase
 }
 
-// Database types for better TypeScript support
-export type Profile = {
-  id: string
-  email: string
-  role: 'admin' | 'collaborator' | 'viewer'
-  full_name?: string
-  avatar_url?: string
-  created_at: string
-  updated_at: string
+export function getSupabaseClientSync() {
+  return isSupabaseConfigured ? supabase : null
 }
 
-export type UserManagement = {
-  id: string
-  email: string
-  role: 'admin' | 'collaborator' | 'viewer'
-  full_name?: string
-  created_at: string
-  last_sign_in_at?: string
-  email_confirmed: boolean
+export async function clearSupabaseCache() {
+  console.log("🗑️ Supabase cache cleared")
+}
+
+export async function requireSupabase() {
+  return isSupabaseConfigured
+}
+
+// Database types - updated to match new schema
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string
+          email: string
+          full_name?: string
+          role?: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          full_name?: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          full_name?: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      app_settings: {
+        Row: {
+          id: string
+          key: string
+          value: any
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          value: any
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          value?: any
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      survey_responses: {
+        Row: {
+          id: string
+          session_id: string
+          user_agent?: string
+          ip_address?: string
+          role?: string
+          other_role?: string
+          seniority?: string
+          company_type?: string
+          company_size?: string
+          industry?: string
+          product_type?: string
+          customer_segment?: string
+          main_challenge?: string
+          daily_tools?: string[]
+          other_tool?: string
+          learning_methods?: string[]
+          salary_currency?: string
+          salary_min?: string
+          salary_max?: string
+          salary_average?: string
+          email?: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          user_agent?: string
+          ip_address?: string
+          role?: string
+          other_role?: string
+          seniority?: string
+          company_type?: string
+          company_size?: string
+          industry?: string
+          product_type?: string
+          customer_segment?: string
+          main_challenge?: string
+          daily_tools?: string[]
+          other_tool?: string
+          learning_methods?: string[]
+          salary_currency?: string
+          salary_min?: string
+          salary_max?: string
+          salary_average?: string
+          email?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          user_agent?: string
+          ip_address?: string
+          role?: string
+          other_role?: string
+          seniority?: string
+          company_type?: string
+          company_size?: string
+          industry?: string
+          product_type?: string
+          customer_segment?: string
+          main_challenge?: string
+          daily_tools?: string[]
+          other_tool?: string
+          learning_methods?: string[]
+          salary_currency?: string
+          salary_min?: string
+          salary_max?: string
+          salary_average?: string
+          email?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+    }
+  }
 }
