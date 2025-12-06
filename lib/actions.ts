@@ -1,17 +1,39 @@
 "use server"
 
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import type { Database } from "./supabase"
+
+function getSupabaseServerClient() {
+  const cookieStore = cookies()
+
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {
+            // Handle cookie setting errors in Server Actions
+          }
+        },
+      },
+    },
+  )
+}
 
 export async function signInWithPassword(email: string, password: string) {
   if (!email || !password) {
     return { error: "Email and password are required" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+  const supabase = getSupabaseServerClient()
 
   try {
     const { error } = await supabase.auth.signInWithPassword({
@@ -42,8 +64,7 @@ export async function signIn(prevState: any, formData: FormData) {
     return { error: "Email and password are required" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+  const supabase = getSupabaseServerClient()
 
   try {
     const { error } = await supabase.auth.signInWithPassword({
@@ -74,8 +95,7 @@ export async function signUp(prevState: any, formData: FormData) {
     return { error: "Email and password are required" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+  const supabase = getSupabaseServerClient()
 
   try {
     const { error } = await supabase.auth.signUp({
@@ -95,8 +115,7 @@ export async function signUp(prevState: any, formData: FormData) {
 }
 
 export async function signOut() {
-  const cookieStore = cookies()
-  const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+  const supabase = getSupabaseServerClient()
 
   await supabase.auth.signOut()
   redirect("/auth/login")

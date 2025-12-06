@@ -29,7 +29,10 @@ export const supabase = (() => {
     } as any
   }
 
-  return createBrowserClient(url, key)
+  return createBrowserClient({
+    supabaseUrl: url,
+    supabaseKey: key,
+  })
 })()
 
 // Legacy function for backward compatibility
