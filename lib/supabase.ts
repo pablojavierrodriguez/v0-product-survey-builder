@@ -1,19 +1,19 @@
 import { createBrowserClient } from "@supabase/ssr"
 
 export const isSupabaseConfigured = (() => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-  return typeof url === "string" && url.length > 0 && typeof key === "string" && key.length > 0
+  return url.length > 0 && key.length > 0 && url.startsWith("http")
 })()
 
 export const supabase = (() => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-  if (!url || !key) {
-    console.warn("⚠️ Supabase environment variables are not set. Please configure Supabase variables")
-    // Return a dummy client to prevent errors
+  if (!url || !key || !url.startsWith("http")) {
+    console.warn("⚠️ Supabase environment variables are not set. Using mock client.")
+    // Return a mock client to prevent errors
     return {
       from: () => ({
         select: () => Promise.resolve({ data: [], error: null }),
@@ -25,14 +25,16 @@ export const supabase = (() => {
       auth: {
         getUser: () => Promise.resolve({ data: { user: null }, error: null }),
         getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        signInWithPassword: () =>
+          Promise.resolve({ data: { user: null, session: null }, error: { message: "Supabase not configured" } }),
+        signUp: () =>
+          Promise.resolve({ data: { user: null, session: null }, error: { message: "Supabase not configured" } }),
+        signOut: () => Promise.resolve({ error: null }),
       },
     } as any
   }
 
-  return createBrowserClient({
-    supabaseUrl: url,
-    supabaseKey: key,
-  })
+  return createBrowserClient(url, key)
 })()
 
 // Legacy function for backward compatibility
