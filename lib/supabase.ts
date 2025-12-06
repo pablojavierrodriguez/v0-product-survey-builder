@@ -1,4 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient } from "@supabase/ssr"
 
 export const isSupabaseConfigured = (() => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -29,10 +29,7 @@ export const supabase = (() => {
     } as any
   }
 
-  return createClientComponentClient({
-    supabaseUrl: url,
-    supabaseKey: key,
-  })
+  return createBrowserClient(url, key)
 })()
 
 // Legacy function for backward compatibility
