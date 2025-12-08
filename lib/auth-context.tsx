@@ -71,7 +71,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   .select("*")
                   .eq("id", session.user.id)
                   .limit(1)
-                console.log("🔐 [Auth] Profile loaded:", profileData?.[0])
+                console.log("🔐 [Auth] Profile query result:", {
+                  profileData,
+                  firstProfile: profileData?.[0],
+                  role: profileData?.[0]?.role,
+                })
                 const loadedProfile = profileData?.[0] || null
                 const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
                 console.log("🔐 [Auth] User role determined:", userRole, "for email:", session.user.email)
@@ -117,7 +121,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Fetch user profile
             try {
               const { data: profileData } = await client.from("profiles").select("*").eq("id", session.user.id).limit(1)
-              console.log("🔐 [Auth] Initial profile loaded:", profileData?.[0])
+              console.log("🔐 [Auth] Initial profile query result:", {
+                profileData,
+                firstProfile: profileData?.[0],
+                role: profileData?.[0]?.role,
+              })
               const loadedProfile = profileData?.[0] || null
               const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
               console.log("🔐 [Auth] Initial user role determined:", userRole, "for email:", session.user.email)
@@ -145,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await client.auth.signOut()
           localStorage.removeItem("supabase.auth.token")
-          localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
+          localStorage.removeItem("sb-" + window.location.hostname + "-auth-token")
         } catch (clearError) {
           console.warn("Error clearing auth data:", clearError)
         }
