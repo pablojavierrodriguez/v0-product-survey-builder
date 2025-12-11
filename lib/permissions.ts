@@ -32,19 +32,40 @@ export interface UserPermissions {
 }
 
 export function getUserRoleFromProfile(profile: Profile | null, userEmail?: string): "admin" | "viewer" {
-  if (!profile && !userEmail) return "viewer"
+  console.log("[v0] getUserRoleFromProfile called with:", {
+    profileRole: profile?.role,
+    profileEmail: profile?.email,
+    userEmail,
+    fullName: profile?.full_name,
+  })
 
-  // Check by email for admin access
+  if (!profile && !userEmail) {
+    console.log("[v0] No profile or email, returning viewer")
+    return "viewer"
+  }
+
+  if (profile?.role) {
+    console.log("[v0] Profile has role field:", profile.role)
+    // Map database roles to our role system
+    if (profile.role === "admin" || profile.role === "administrator") {
+      console.log("[v0] Returning admin based on profile.role")
+      return "admin"
+    }
+    if (profile.role === "viewer") {
+      console.log("[v0] Returning viewer based on profile.role")
+      return "viewer"
+    }
+  }
+
+  // Check by email for admin access (fallback)
   const email = profile?.email || userEmail
   if (email === "admin@demo.com" || email === "admin@example.com") {
+    console.log("[v0] Returning admin based on known email:", email)
     return "admin"
   }
 
-  // Check by full_name as fallback (if user has full_name, they're admin)
-  if (profile?.full_name) {
-    return "admin"
-  }
-
+  // No admin criteria met, returning viewer
+  console.log("[v0] No admin criteria met, returning viewer")
   return "viewer"
 }
 

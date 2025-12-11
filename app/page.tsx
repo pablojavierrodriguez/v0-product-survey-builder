@@ -189,6 +189,8 @@ export default function ProductSurvey() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [isMounted, setIsMounted] = useState(false)
   const [hasCheckedConfig, setHasCheckedConfig] = useState(false)
+  const [otherRole, setOtherRole] = useState("")
+  const [otherTool, setOtherTool] = useState("")
 
   const totalSteps = 12
 
@@ -204,7 +206,6 @@ export default function ProductSurvey() {
       }
     }
 
-    // Check configuration status
     const checkConfig = async () => {
       try {
         const response = await fetch("/api/config/check")
@@ -225,15 +226,6 @@ export default function ProductSurvey() {
 
     checkConfig()
   }, [])
-
-  useEffect(() => {
-    const completed = sessionStorage.getItem("survey-completed")
-    if (completed === "true") {
-      setCurrentStep(totalSteps + 1)
-    }
-  }, [])
-
-  // Settings loading removed - not needed for basic functionality
 
   // Handlers for single choice questions (no auto-advance)
   const handleRoleSelect = (role: string) => {
@@ -478,11 +470,21 @@ export default function ProductSurvey() {
                 <input
                   type="text"
                   placeholder="Please specify your role..."
-                  value={surveyData.other_role}
-                  onChange={(e) => handleOtherRoleChange(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                  value={otherRole}
+                  onChange={(e) => setOtherRole(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                    placeholder-gray-500 dark:placeholder-gray-400
+                    focus:border-blue-500 focus:outline-none"
                 />
-                <Button onClick={handleNext} disabled={!surveyData.other_role.trim()} className="w-full">
+                <Button
+                  onClick={() => {
+                    handleRoleSelect(otherRole) // lo guardás como valor en el mismo campo role
+                    handleNext()
+                  }}
+                  disabled={!otherRole.trim()}
+                  className="w-full"
+                >
                   Continue <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </motion.div>
@@ -561,14 +563,12 @@ export default function ProductSurvey() {
             question="What's your customer segment?"
             options={customerSegmentOptions}
             selectedValue={surveyData.customer_segment}
-            onSelect={(value) =>
-              setSurveyData((prev) => ({ ...prev, customer_segment: value }))
-            }
+            onSelect={(value) => setSurveyData((prev) => ({ ...prev, customer_segment: value }))}
             onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
-        );
+        )
 
       case 8:
         return (
@@ -594,6 +594,15 @@ export default function ProductSurvey() {
         )
 
       case 9:
+        const handleFinalNext = () => {
+          let tools = [...surveyData.daily_tools]
+          if (tools.includes("Other")) {
+            tools = tools.map((t) => (t === "Other" ? otherTool : t))
+          }
+          setSurveyData((prev) => ({ ...prev, daily_tools: tools }))
+          handleNext()
+        }
+
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -607,6 +616,7 @@ export default function ProductSurvey() {
             >
               What tools do you use daily? (Select all that apply)
             </motion.h2>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {toolOptions.map((tool) => (
                 <motion.button
@@ -622,7 +632,7 @@ export default function ProductSurvey() {
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm"
                         : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
                     }
-                  `}
+                    `}
                 >
                   <span className="text-sm sm:text-base font-medium pr-2">{tool}</span>
                   {surveyData.daily_tools.includes(tool) && (
@@ -637,9 +647,12 @@ export default function ProductSurvey() {
                 <input
                   type="text"
                   placeholder="Please specify other tools..."
-                  value={surveyData.other_tool}
-                  onChange={(e) => handleOtherToolChange(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                  value={otherTool}
+                  onChange={(e) => setOtherTool(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                    placeholder-gray-500 dark:placeholder-gray-400
+                    focus:border-blue-500 focus:outline-none"
                 />
               </motion.div>
             )}
@@ -647,6 +660,14 @@ export default function ProductSurvey() {
             <div className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
               {surveyData.daily_tools.length} selected
             </div>
+
+            <Button
+              onClick={handleFinalNext}
+              disabled={surveyData.daily_tools.includes("Other") && !otherTool.trim()}
+              className="w-full mt-4"
+            >
+              Continue <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </motion.div>
         )
 

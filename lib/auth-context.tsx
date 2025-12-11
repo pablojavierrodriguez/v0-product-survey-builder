@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase"
 import type { Database } from "./supabase"
+import { getUserRoleFromProfile } from "./permissions"
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 
@@ -53,6 +54,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (mounted) setSupabase(client)
 
+        const {
+          data: { subscription },
+        } = client.auth.onAuthStateChange(async (event: any, session: any) => {
+          console.log("🔐 [Auth] State change:", event, session?.user?.email)
+
+          if (session?.user?.id) {
+            if (mounted) {
+              setSession(session)
+              setUser(session.user)
+
+              // Fetch user profile
+              try {
+                const { data: profileData } = await client
+                  .from("profiles")
+                  .select("*")
+                  .eq("id", session.user.id)
+                  .limit(1)
+                console.log("🔐 [Auth] Profile query result:", {
+                  profileData,
+                  firstProfile: profileData?.[0],
+                  role: profileData?.[0]?.role,
+                })
+                const loadedProfile = profileData?.[0] || null
+                const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
+                console.log("🔐 [Auth] User role determined:", userRole, "for email:", session.user.email)
+                if (mounted) setProfile(loadedProfile)
+              } catch (profileError) {
+                console.warn("Could not fetch profile:", profileError)
+                if (mounted) setProfile(null)
+              }
+            }
+          } else {
+            console.log("🔐 [Auth] No valid session found")
+            if (mounted) {
+              setSession(null)
+              setUser(null)
+              setProfile(null)
+            }
+          }
+        })
+
         // Clear potentially corrupted tokens
         localStorage.removeItem("supabase.auth.token")
         localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
@@ -79,7 +121,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Fetch user profile
             try {
               const { data: profileData } = await client.from("profiles").select("*").eq("id", session.user.id).limit(1)
-              if (mounted) setProfile(profileData?.[0] || null)
+              console.log("🔐 [Auth] Initial profile query result:", {
+                profileData,
+                firstProfile: profileData?.[0],
+                role: profileData?.[0]?.role,
+              })
+              const loadedProfile = profileData?.[0] || null
+              const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
+              console.log("🔐 [Auth] Initial user role determined:", userRole, "for email:", session.user.email)
+              if (mounted) setProfile(loadedProfile)
             } catch (profileError) {
               console.warn("Could not fetch profile:", profileError)
               if (mounted) setProfile(null)
@@ -93,14 +143,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(null)
           }
         }
+
+        return () => {
+          subscription.unsubscribe()
+        }
       } catch (authError: any) {
         console.warn("🔐 [Auth] Auth error - clearing session:", authError.message)
-        // Clear all auth data on any auth error
-        const client = supabase // Declare the client variable here
+        const client = supabase
         try {
           await client.auth.signOut()
           localStorage.removeItem("supabase.auth.token")
-          localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
+          localStorage.removeItem("sb-" + window.location.hostname + "-auth-token")
         } catch (clearError) {
           console.warn("Error clearing auth data:", clearError)
         }
@@ -118,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
   }, [])
 
-  const userIsAdmin = profile?.email === "admin@demo.com" || profile?.email === "admin@example.com"
+  const userIsAdmin = getUserRoleFromProfile(profile, user?.email) === "admin"
 
   const signInWithPassword = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {

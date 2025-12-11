@@ -1,14 +1,41 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient } from "@supabase/ssr"
 
-// Check if Supabase environment variables are available
-export const isSupabaseConfigured =
-  typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
-  typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
+export const isSupabaseConfigured = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-// Create a singleton instance of the Supabase client for Client Components
-export const supabase = createClientComponentClient<Database>()
+  return url.length > 0 && key.length > 0 && url.startsWith("http")
+})()
+
+export const supabase = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+
+  if (!url || !key || !url.startsWith("http")) {
+    console.warn("⚠️ Supabase environment variables are not set. Using mock client.")
+    // Return a mock client to prevent errors
+    return {
+      from: () => ({
+        select: () => Promise.resolve({ data: [], error: null }),
+        insert: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+        upsert: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+        update: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+        delete: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
+      }),
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        signInWithPassword: () =>
+          Promise.resolve({ data: { user: null, session: null }, error: { message: "Supabase not configured" } }),
+        signUp: () =>
+          Promise.resolve({ data: { user: null, session: null }, error: { message: "Supabase not configured" } }),
+        signOut: () => Promise.resolve({ error: null }),
+      },
+    } as any
+  }
+
+  return createBrowserClient(url, key)
+})()
 
 // Legacy function for backward compatibility
 export async function getSupabaseClient() {
@@ -65,31 +92,25 @@ export interface Database {
       }
       app_settings: {
         Row: {
-          id: number
+          id: string
+          key: string
+          value: any
           created_at: string
           updated_at: string
-          environment: string
-          survey_table_name: string
-          app_name: string
-          settings: any
         }
         Insert: {
-          id?: number
+          id?: string
+          key: string
+          value: any
           created_at?: string
           updated_at?: string
-          environment: string
-          survey_table_name: string
-          app_name: string
-          settings?: any
         }
         Update: {
-          id?: number
+          id?: string
+          key?: string
+          value?: any
           created_at?: string
           updated_at?: string
-          environment?: string
-          survey_table_name?: string
-          app_name?: string
-          settings?: any
         }
       }
       survey_responses: {
