@@ -250,6 +250,10 @@ export default function SurveysManagementPage() {
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push(`/admin/surveys/${survey.id}/edit`)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Questions
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -282,6 +286,15 @@ export default function SurveysManagementPage() {
                   >
                     <BarChart3 className="w-4 h-4 mr-2" />
                     Analytics
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/admin/surveys/${survey.id}/edit`)}
+                    className="bg-transparent"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Questions
                   </Button>
                 </div>
               </CardContent>

@@ -19,36 +19,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
     }
 
-    // Parse request body - expecting normalized data now
     const body = await request.json()
-    const { response_data, session_id, user_agent, ip_address } = body
+    const { survey_id, response_data, session_id, user_agent, ip_address } = body
 
     console.log("📊 Received data:", {
+      surveyId: survey_id,
       hasResponseData: !!response_data,
       sessionId: session_id,
       userAgent: user_agent?.substring(0, 50) + "...",
     })
 
-    if (!response_data) {
-      return NextResponse.json({ success: false, error: "Response data is required" }, { status: 400 })
+    if (!survey_id || !response_data) {
+      return NextResponse.json({ success: false, error: "Survey ID and response data are required" }, { status: 400 })
     }
 
     const normalizedData = {
+      survey_id,
       session_id: session_id || `session-${Date.now()}`,
       user_agent,
       ip_address,
-      role: response_data.role || "other",
+      // Store all response data as JSONB - this allows any survey configuration
+      response_data,
+      // Also map common fields for backward compatibility
+      role: response_data.role || null,
       other_role: response_data.other_role || null,
-      seniority: response_data.seniority || "mid",
+      seniority: response_data.seniority || null,
       company_type: response_data.company_type || null,
-      company_size: response_data.company_size || "medium",
-      industry: response_data.industry || "technology",
+      company_size: response_data.company_size || null,
+      industry: response_data.industry || null,
       product_type: response_data.product_type || null,
       customer_segment: response_data.customer_segment || null,
       main_challenge: response_data.main_challenge || null,
-      daily_tools: response_data.daily_tools || [],
+      daily_tools: response_data.daily_tools || null,
       other_tool: response_data.other_tool || null,
-      learning_methods: response_data.learning_methods || [],
+      learning_methods: response_data.learning_methods || null,
       salary_currency: response_data.salary_currency || null,
       salary_min: response_data.salary_min ? Number.parseInt(response_data.salary_min) : null,
       salary_max: response_data.salary_max ? Number.parseInt(response_data.salary_max) : null,

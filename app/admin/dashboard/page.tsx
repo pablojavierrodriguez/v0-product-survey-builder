@@ -18,6 +18,8 @@ import {
   BarChart3,
   PieChart,
   Calendar,
+  List,
+  Plus,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import type { UserRole } from "@/lib/permissions"
@@ -370,7 +372,7 @@ export default function AdminDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
             <Button
               variant="outline"
               className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
@@ -379,6 +381,26 @@ export default function AdminDashboard() {
               <BarChart3 className="h-5 w-5" />
               <span className="text-sm">View Analytics</span>
             </Button>
+            {permissions.canEditSurveys && (
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
+                onClick={() => router.push("/admin/surveys")}
+              >
+                <List className="h-5 w-5" />
+                <span className="text-sm">Manage Surveys</span>
+              </Button>
+            )}
+            {permissions.canEditSurveys && (
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
+                onClick={() => router.push("/admin/surveys/new")}
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-sm">Create Survey</span>
+              </Button>
+            )}
             {permissions.canModifyDatabase && (
               <Button
                 variant="outline"
@@ -387,16 +409,6 @@ export default function AdminDashboard() {
               >
                 <Database className="h-5 w-5" />
                 <span className="text-sm">Export Data</span>
-              </Button>
-            )}
-            {permissions.canEditSurveys && (
-              <Button
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
-                onClick={() => router.push("/admin/survey-config")}
-              >
-                <FileText className="h-5 w-5" />
-                <span className="text-sm">Survey Config</span>
               </Button>
             )}
           </div>

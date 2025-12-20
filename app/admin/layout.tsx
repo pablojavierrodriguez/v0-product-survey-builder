@@ -10,7 +10,7 @@ import { getPermissions, getUserRoleFromProfile } from "@/lib/permissions"
 import { useSettings } from "@/lib/use-settings"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { LayoutDashboard, BarChart3, FileText, Database, Settings, Menu, X, LogOut, User } from "lucide-react"
+import { LayoutDashboard, BarChart3, FileText, Database, Settings, Menu, X, LogOut, User, List } from "lucide-react"
 import Link from "next/link"
 
 interface AdminUser {
@@ -89,6 +89,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       href: "/admin/analytics",
       icon: BarChart3,
       show: permissions.canViewAnalytics,
+    },
+    {
+      name: "Surveys",
+      href: "/admin/surveys",
+      icon: List,
+      show: permissions.canEditSurveys,
     },
     {
       name: "Survey Config",
