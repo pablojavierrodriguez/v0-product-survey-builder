@@ -28,8 +28,6 @@ function LoginForm() {
     setIsLoading(true)
     setError("")
 
-    console.log("🔧 [Login] Attempting login with:", { email, password: "***" })
-
     // Validation
     if (!email || !password) {
       setError("Please enter both email and password")
@@ -40,24 +38,18 @@ function LoginForm() {
     try {
       const result = await signInWithPassword(email, password)
 
-      console.log("🔧 [Login] SignIn result:", { error: result?.error || "No error" })
-
       if (result?.error) {
         setError(result.error)
-        console.error("🔧 [Login] Login failed:", result.error)
       } else {
-        console.log("🔧 [Login] Login successful, waiting for auth state update...")
-
         // Small delay to allow AuthProvider to update
         setTimeout(() => {
-          console.log("🔧 [Login] Redirecting to:", redirectTo)
           router.push(redirectTo)
           router.refresh()
         }, 500)
       }
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")
-      console.error("🔧 [Login] Login error:", error)
+      console.error("Login error:", error)
     }
 
     setIsLoading(false)
@@ -166,21 +158,6 @@ function LoginForm() {
                   <User className="mr-2 h-4 w-4" />
                   Create Account
                 </Button>
-              </div>
-            </div>
-
-            {/* Demo credentials for testing */}
-            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Demo Credentials</h4>
-                <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                  <p>
-                    <strong>Viewer Demo:</strong> viewer@demo.com / viewer123 (Read-only analytics)
-                  </p>
-                  <p>
-                    <strong>Admin Demo:</strong> admin-demo@demo.com / demo123 (Read-only admin panel)
-                  </p>
-                </div>
               </div>
             </div>
 
