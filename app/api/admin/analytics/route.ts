@@ -3,6 +3,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
 interface SurveyResponse {
   id: string
+  survey_id?: string
   created_at: string
   updated_at: string
   session_id: string
@@ -33,11 +34,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
     }
 
-    // Get analytics data from normalized survey_responses table
-    const { data: surveyData, error: surveyError } = await supabase
-      .from("survey_responses")
-      .select("*")
-      .order("created_at", { ascending: false })
+    const { searchParams } = new URL(request.url)
+    const surveyFilter = searchParams.get("survey")
+
+    // Build query with optional survey filter
+    let query = supabase.from("survey_responses").select("*").order("created_at", { ascending: false })
+
+    if (surveyFilter) {
+      query = query.eq("survey_id", surveyFilter)
+    }
+
+    const { data: surveyData, error: surveyError } = await query
 
     if (surveyError) {
       console.log("[v0] Error fetching survey data:", surveyError)
@@ -47,11 +54,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log("[v0] Survey data fetched:", surveyData?.length || 0, "records")
+    console.log(
+      "[v0] Survey data fetched:",
+      surveyData?.length || 0,
+      "records",
+      surveyFilter ? `(filtered by survey: ${surveyFilter})` : "(all surveys)",
+    )
 
     const totalResponses = surveyData?.length || 0
     const today = new Date().toDateString()
-    const todayResponses = surveyData?.filter((r: SurveyResponse) => new Date(r.created_at).toDateString() === today).length || 0
+    const todayResponses =
+      surveyData?.filter((r: SurveyResponse) => new Date(r.created_at).toDateString() === today).length || 0
 
     // Initialize distributions
     const roleDistribution: { [key: string]: number } = {}
@@ -105,6 +118,7 @@ export async function GET(request: NextRequest) {
     const recentResponses =
       surveyData?.slice(0, 10).map((response: SurveyResponse) => ({
         id: response.id,
+        survey_id: response.survey_id,
         role: response.role,
         seniority: response.seniority,
         company_size: response.company_size,
@@ -124,6 +138,7 @@ export async function GET(request: NextRequest) {
         toolsUsage,
         learningMethods,
         recentResponses,
+        filter: surveyFilter ? { survey_id: surveyFilter } : null,
       },
     })
   } catch (error) {

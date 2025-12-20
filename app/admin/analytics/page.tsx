@@ -1,13 +1,32 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect, useMemo, useCallback, memo } from "react"
+import { useState, useEffect, useMemo, useCallback, memo, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BarChart3, PieChart, TrendingUp, Users, RefreshCw, Download, Trophy, MessageSquare } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  Users,
+  RefreshCw,
+  Download,
+  Trophy,
+  MessageSquare,
+  Filter,
+} from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/auth-context"
+import type { Survey } from "@/lib/types/survey"
+import { Badge } from "@/components/ui/badge"
 
 interface AnalyticsData {
   roleDistribution: { [key: string]: number }
@@ -215,22 +234,109 @@ const StatsCard = memo(
 
 StatsCard.displayName = "StatsCard"
 
+function SurveyFilterContent({
+  surveys,
+  selectedSurvey,
+  onSurveyChange,
+}: {
+  surveys: Survey[]
+  selectedSurvey: string | null
+  onSurveyChange: (surveyId: string | null) => void
+}) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  useEffect(() => {
+    const surveyParam = searchParams.get("survey")
+    if (surveyParam !== selectedSurvey) {
+      onSurveyChange(surveyParam)
+    }
+  }, [searchParams, selectedSurvey, onSurveyChange])
+
+  const handleSurveyFilter = useCallback(
+    (surveyId: string | null) => {
+      onSurveyChange(surveyId)
+      const params = new URLSearchParams(searchParams.toString())
+      if (surveyId) {
+        params.set("survey", surveyId)
+      } else {
+        params.delete("survey")
+      }
+      router.push(`/admin/analytics?${params.toString()}`)
+    },
+    [onSurveyChange, router, searchParams],
+  )
+
+  const currentSurvey = surveys.find((s) => s.id === selectedSurvey)
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="text-xs sm:text-sm bg-transparent gap-2">
+          <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          {currentSurvey ? (
+            <>
+              <span className="hidden sm:inline">{currentSurvey.title}</span>
+              <span className="sm:hidden">Survey</span>
+            </>
+          ) : (
+            "All Surveys"
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>Filter by Survey</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => handleSurveyFilter(null)}>
+          <span className="flex-1">All Surveys</span>
+          {!selectedSurvey && <Badge variant="secondary">Active</Badge>}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {surveys.map((survey) => (
+          <DropdownMenuItem key={survey.id} onClick={() => handleSurveyFilter(survey.id)}>
+            <span className="flex-1 truncate">{survey.title}</span>
+            {selectedSurvey === survey.id && <Badge variant="secondary">Active</Badge>}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export default function AnalyticsPage() {
   const { user, profile } = useAuth()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [surveys, setSurveys] = useState<Survey[]>([])
+  const [selectedSurvey, setSelectedSurvey] = useState<string | null>(null)
 
   const isAdmin = Boolean(profile?.full_name || user?.email === "admin@demo.com" || user?.email === "admin@example.com")
 
-  // Memoized fetch function
+  useEffect(() => {
+    fetchSurveys()
+  }, [])
+
+  const fetchSurveys = async () => {
+    try {
+      const response = await fetch("/api/admin/surveys")
+      if (response.ok) {
+        const data = await response.json()
+        setSurveys(data.surveys || [])
+      }
+    } catch (err) {
+      console.error("Error fetching surveys:", err)
+    }
+  }
+
   const fetchAnalyticsData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch("/api/admin/analytics")
+      const url = selectedSurvey ? `/api/admin/analytics?survey=${selectedSurvey}` : "/api/admin/analytics"
+      const response = await fetch(url)
       const result = await response.json()
 
       if (result.success) {
@@ -245,116 +351,11 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [selectedSurvey])
 
-  // Memoized export functions
-  const exportAnalyticsJson = useCallback(() => {
-    if (!data) return
-
-    const exportData = {
-      ...data,
-      exportedAt: new Date().toISOString(),
-    }
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `analytics-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, [data])
-
-  const exportAnalyticsCsv = useCallback(() => {
-    if (!data) return
-
-    const addDistributionToRows = (dist: { [key: string]: number }, category: string, total: number) => {
-      const rows: Array<{
-        category: string
-        value: string
-        count: number
-        percentage: string
-      }> = []
-      Object.entries(dist).forEach(([key, count]) => {
-        rows.push({
-          category,
-          value: key,
-          count,
-          percentage: ((count / total) * 100).toFixed(2),
-        })
-      })
-      return rows
-    }
-
-    const csvRows = []
-    csvRows.push(["Category", "Value", "Count", "Percentage"])
-
-    // Add all distributions
-    const total = data.totalResponses
-    if (total > 0) {
-      csvRows.push(
-        ...addDistributionToRows(data.roleDistribution, "Role", total).map((row) => [
-          row.category,
-          row.value,
-          row.count,
-          row.percentage,
-        ]),
-      )
-      csvRows.push(
-        ...addDistributionToRows(data.seniorityDistribution, "Seniority", total).map((row) => [
-          row.category,
-          row.value,
-          row.count,
-          row.percentage,
-        ]),
-      )
-      csvRows.push(
-        ...addDistributionToRows(data.companyDistribution, "Company Type", total).map((row) => [
-          row.category,
-          row.value,
-          row.count,
-          row.percentage,
-        ]),
-      )
-      csvRows.push(
-        ...addDistributionToRows(data.industryDistribution, "Industry", total).map((row) => [
-          row.category,
-          row.value,
-          row.count,
-          row.percentage,
-        ]),
-      )
-      csvRows.push(
-        ...addDistributionToRows(data.toolsUsage, "Tools", total).map((row) => [
-          row.category,
-          row.value,
-          row.count,
-          row.percentage,
-        ]),
-      )
-      csvRows.push(
-        ...addDistributionToRows(data.learningMethods, "Learning Methods", total).map((row) => [
-          row.category,
-          row.value,
-          row.count,
-          row.percentage,
-        ]),
-      )
-    }
-
-    const csvContent = csvRows.map((row) => row.join(",")).join("\n")
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `analytics-${new Date().toISOString().split("T")[0]}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, [data])
+  useEffect(() => {
+    fetchAnalyticsData()
+  }, [fetchAnalyticsData, selectedSurvey])
 
   // Load data on mount
   useEffect(() => {
@@ -405,6 +406,17 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <Suspense
+            fallback={
+              <Button variant="outline" size="sm" disabled className="bg-transparent">
+                <Filter className="h-4 w-4 mr-2" />
+                Loading...
+              </Button>
+            }
+          >
+            <SurveyFilterContent surveys={surveys} selectedSurvey={selectedSurvey} onSurveyChange={setSelectedSurvey} />
+          </Suspense>
+
           <Button
             variant="outline"
             size="sm"
@@ -424,8 +436,8 @@ export default function AnalyticsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={exportAnalyticsJson}>Export as JSON</DropdownMenuItem>
-              <DropdownMenuItem onClick={exportAnalyticsCsv}>Export as CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportAnalyticsJson(data)}>Export as JSON</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportAnalyticsCsv(data)}>Export as CSV</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -492,4 +504,113 @@ export default function AnalyticsPage() {
       </div>
     </div>
   )
+}
+
+// Memoized export functions
+const exportAnalyticsJson = (data: AnalyticsData | null) => {
+  if (!data) return
+
+  const exportData = {
+    ...data,
+    exportedAt: new Date().toISOString(),
+  }
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `analytics-${new Date().toISOString().split("T")[0]}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+const exportAnalyticsCsv = (data: AnalyticsData | null) => {
+  if (!data) return
+
+  const addDistributionToRows = (dist: { [key: string]: number }, category: string, total: number) => {
+    const rows: Array<{
+      category: string
+      value: string
+      count: number
+      percentage: string
+    }> = []
+    Object.entries(dist).forEach(([key, count]) => {
+      rows.push({
+        category,
+        value: key,
+        count,
+        percentage: ((count / total) * 100).toFixed(2),
+      })
+    })
+    return rows
+  }
+
+  const csvRows = []
+  csvRows.push(["Category", "Value", "Count", "Percentage"])
+
+  // Add all distributions
+  const total = data.totalResponses
+  if (total > 0) {
+    csvRows.push(
+      ...addDistributionToRows(data.roleDistribution, "Role", total).map((row) => [
+        row.category,
+        row.value,
+        row.count,
+        row.percentage,
+      ]),
+    )
+    csvRows.push(
+      ...addDistributionToRows(data.seniorityDistribution, "Seniority", total).map((row) => [
+        row.category,
+        row.value,
+        row.count,
+        row.percentage,
+      ]),
+    )
+    csvRows.push(
+      ...addDistributionToRows(data.companyDistribution, "Company Type", total).map((row) => [
+        row.category,
+        row.value,
+        row.count,
+        row.percentage,
+      ]),
+    )
+    csvRows.push(
+      ...addDistributionToRows(data.industryDistribution, "Industry", total).map((row) => [
+        row.category,
+        row.value,
+        row.count,
+        row.percentage,
+      ]),
+    )
+    csvRows.push(
+      ...addDistributionToRows(data.toolsUsage, "Tools", total).map((row) => [
+        row.category,
+        row.value,
+        row.count,
+        row.percentage,
+      ]),
+    )
+    csvRows.push(
+      ...addDistributionToRows(data.learningMethods, "Learning Methods", total).map((row) => [
+        row.category,
+        row.value,
+        row.count,
+        row.percentage,
+      ]),
+    )
+  }
+
+  const csvContent = csvRows.map((row) => row.join(",")).join("\n")
+  const blob = new Blob([csvContent], { type: "text/csv" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `analytics-${new Date().toISOString().split("T")[0]}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }

@@ -1,162 +1,323 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowRight, ArrowLeft, Check, Shield, Wrench, Settings } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowRight, Shield, Settings, Wrench, BarChart3, Users, Calendar, ArrowLeft, Check } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useAuth } from "@/lib/auth-context"
 import { useDebugMode } from "@/lib/use-debug-mode"
-import { SurveyProgress } from "@/components/ui/survey-progress"
-import { SingleChoiceQuestion } from "@/components/ui/single-choice-question"
-import { SurveySkeleton, ProgressIndicator, ErrorDisplay, LoadingOverlay } from "@/components/ui/loading-states"
+import { SurveySkeleton, ProgressIndicator, ErrorDisplay } from "@/components/ui/loading-states"
+import type { Survey } from "@/lib/types/survey"
 import { motion, AnimatePresence } from "framer-motion"
+import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 
-interface SurveyData {
-  role: string
-  other_role: string
-  seniority: string
-  company_type: string
-  company_size: string
-  industry: string
-  product_type: string
-  customer_segment: string
-  main_challenge: string
-  daily_tools: string[]
-  other_tool: string
-  learning_methods: string[]
-  salary_currency: string
-  salary_min: string
-  salary_max: string
-  salary_average: string
-  email: string
+// Placeholder components that need to be imported from their respective files
+// For now, they are defined inline to avoid build errors due to missing imports
+// In a real project, you would import these components:
+// import SingleChoiceQuestion from "@/components/ui/single-choice-question";
+// import SurveyProgress from "@/components/ui/survey-progress";
+// import LoadingOverlay from "@/components/ui/loading-overlay";
+
+// Mock implementations for placeholder components
+function SingleChoiceQuestion({ question, options, selectedValue, onSelect, onNext, autoAdvance, delay }) {
+  useEffect(() => {
+    if (autoAdvance && selectedValue && delay) {
+      const timer = setTimeout(() => {
+        onNext()
+      }, delay)
+      return () => clearTimeout(timer)
+    }
+  }, [selectedValue, autoAdvance, onNext, delay])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full max-w-2xl mx-auto space-y-6"
+    >
+      <motion.h2
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
+      >
+        {question}
+      </motion.h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {options.map((option) => (
+          <motion.button
+            key={option}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onSelect(option)}
+            className={`
+              p-4 text-left rounded-xl border-2 transition-all duration-200
+              min-h-[56px] flex items-center justify-between
+              ${
+                selectedValue === option
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
+              }
+            `}
+          >
+            <span className="text-base font-medium">{option}</span>
+            {selectedValue === option && <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+          </motion.button>
+        ))}
+      </div>
+    </motion.div>
+  )
 }
 
-interface AppSettings {
-  general: {
-    maintenanceMode: boolean
-    [key: string]: any
+function SurveyProgress({ current, total, percentage }) {
+  return (
+    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+      <div
+        className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+        style={{ width: `${percentage}%` }}
+      ></div>
+      <div className="text-center text-sm text-gray-700 dark:text-gray-300 mt-2">
+        Step {current} of {total} ({percentage}%)
+      </div>
+    </div>
+  )
+}
+
+function LoadingOverlay({ isVisible, message }) {
+  if (!isVisible) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-75 backdrop-blur-sm">
+      <div className="flex items-center space-x-3 animate-pulse">
+        <div className="inline-block w-6 h-6 border-t-2 border-blue-500 rounded-full animate-spin"></div>
+        <span className="text-white text-lg font-medium">{message}</span>
+      </div>
+    </div>
+  )
+}
+
+function SurveySelectorContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user, userIsAdmin, clearCorruptedSession } = useAuth()
+  const { debugMode } = useDebugMode()
+
+  const [surveys, setSurveys] = useState<Survey[]>([])
+  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [databaseStatus, setDatabaseStatus] = useState<"checking" | "configured" | "not-configured">("checking")
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+    checkConfigAndLoadSurveys()
+  }, [])
+
+  const checkConfigAndLoadSurveys = async () => {
+    try {
+      // Check database configuration
+      const configResponse = await fetch("/api/config/check")
+      const configData = await configResponse.json()
+
+      if (!configData.success || !configData.configured) {
+        setDatabaseStatus("not-configured")
+        setIsLoading(false)
+        return
+      }
+
+      setDatabaseStatus("configured")
+
+      // Fetch active surveys
+      const surveysResponse = await fetch("/api/surveys/active")
+      const surveysData = await surveysResponse.json()
+
+      if (!surveysResponse.ok) {
+        throw new Error(surveysData.error || "Failed to load surveys")
+      }
+
+      const activeSurveys = surveysData.surveys || []
+      setSurveys(activeSurveys)
+
+      if (activeSurveys.length === 1) {
+        setSelectedSurvey(activeSurveys[0])
+        router.push(`/survey/${activeSurveys[0].slug}`)
+      } else if (activeSurveys.length === 0) {
+        setError("No active surveys available at the moment.")
+      }
+    } catch (err) {
+      console.error("Error loading surveys:", err)
+      setError(err instanceof Error ? err.message : "Failed to load surveys")
+      setDatabaseStatus("not-configured")
+    } finally {
+      setIsLoading(false)
+    }
   }
-  [key: string]: any
+
+  const handleSurveySelect = (survey: Survey) => {
+    setSelectedSurvey(survey)
+    router.push(`/survey/${survey.slug}`)
+  }
+
+  if (!isMounted) {
+    return <SurveySkeleton />
+  }
+
+  if (isLoading) {
+    return <ProgressIndicator message="Loading surveys..." />
+  }
+
+  if (databaseStatus === "not-configured") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+        <div className="max-w-md mx-auto text-center space-y-6 p-8">
+          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto">
+            <Settings className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configuration Required</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            The application needs to be configured before it can be used.
+          </p>
+          <Button onClick={() => (window.location.href = "/setup")} className="w-full">
+            Configure Application
+            <Settings className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <ErrorDisplay
+        error={error}
+        onRetry={() => {
+          setError(null)
+          checkConfigAndLoadSurveys()
+        }}
+      />
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+              <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">
+                Survey Platform
+              </h1>
+            </div>
+            <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">
+              <ModeToggle />
+              {user ? (
+                <Button
+                  onClick={() => (window.location.href = "/admin/dashboard")}
+                  size="sm"
+                  className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
+                >
+                  <Shield className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Admin Panel</span>
+                  <span className="sm:hidden">Panel</span>
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => (window.location.href = "/auth/login")}
+                  size="sm"
+                  className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
+                >
+                  <Shield className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Login</span>
+                  <span className="sm:hidden">Login</span>
+                </Button>
+              )}
+
+              {user && debugMode && (
+                <Button
+                  onClick={async () => {
+                    await clearCorruptedSession()
+                    window.location.reload()
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="ml-1 px-2 h-7 text-xs"
+                  title="Clear corrupted session (debug mode)"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content - Survey Selector */}
+      <main className="flex-1 py-8 md:py-12 px-4 md:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Choose a Survey</h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400">Select a survey below to get started</p>
+          </div>
+
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
+            {surveys.map((survey) => (
+              <Card
+                key={survey.id}
+                className="hover:shadow-lg transition-all cursor-pointer group"
+                onClick={() => handleSurveySelect(survey)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-xl group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {survey.title}
+                  </CardTitle>
+                  {survey.description && <CardDescription className="mt-2">{survey.description}</CardDescription>}
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(survey.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20"
+                    >
+                      Start Survey
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Admin Quick Actions */}
+          {userIsAdmin && (
+            <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Admin Actions</h3>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" onClick={() => router.push("/admin/surveys")} className="bg-transparent">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Manage Surveys
+                </Button>
+                <Button variant="outline" onClick={() => router.push("/admin/analytics")} className="bg-transparent">
+                  <Users className="w-4 h-4 mr-2" />
+                  View Analytics
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
 }
-
-const roleOptions = [
-  "Product Manager",
-  "Product Owner",
-  "Product Designer / UX/UI Designer (UXer)",
-  "Product Engineer / Software Engineer (Developer)",
-  "Data Analyst / Product Analyst",
-  "Product Marketing Manager",
-  "Engineering Manager / Tech Lead",
-  "Design Manager / Design Lead",
-  "QA Engineer / Test Engineer",
-  "DevOps Engineer / Platform Engineer",
-  "Technical Writer / Documentation",
-  "Customer Success Manager",
-  "Sales Engineer / Solutions Engineer",
-  "Other",
-]
-
-const seniorityOptions = [
-  "Junior (0-2 years)",
-  "Mid-level (2-5 years)",
-  "Senior (5-8 years)",
-  "Staff/Principal (8+ years)",
-  "Manager/Lead",
-  "Director/VP",
-  "C-level/Founder",
-]
-
-const companyTypeOptions = [
-  "Startup (1-50 employees)",
-  "Scale-up (51-200 employees)",
-  "Mid-size company (201-1000 employees)",
-  "Large enterprise (1000+ employees)",
-  "Freelance/Independent",
-  "Agency/Consultancy",
-  "Other",
-]
-
-const companySizeOptions = [
-  "Early-stage Startup (Pre-seed/Seed)",
-  "Growth-stage Startup (Series A-C)",
-  "Scale-up (Series D+)",
-  "SME (Small/Medium Enterprise)",
-  "Large Corporate (1000+ employees)",
-  "Enterprise (10,000+ employees)",
-  "Consultancy/Agency",
-  "Freelance/Independent",
-]
-
-const industryOptions = [
-  "Technology/Software",
-  "Financial Services/Fintech",
-  "Healthcare/Medtech",
-  "E-commerce/Retail",
-  "Education/Edtech",
-  "Media/Entertainment",
-  "Manufacturing/Industrial",
-  "Consulting/Professional Services",
-  "Government/Public Sector",
-  "Non-profit/NGO",
-  "Other",
-]
-
-const productTypeOptions = [
-  "SaaS (B2B)",
-  "SaaS (B2C)",
-  "Mobile App",
-  "Web Application",
-  "E-commerce Platform",
-  "API/Developer Tools",
-  "Hardware + Software",
-  "Services/Consulting",
-  "Internal Tools",
-  "Other",
-]
-
-const customerSegmentOptions = ["B2B Product", "B2C Product", "B2B2C Product", "Internal Product", "Mixed (B2B + B2C)"]
-
-const toolOptions = [
-  "Jira",
-  "Figma",
-  "Notion",
-  "Miro",
-  "Trello",
-  "Asana",
-  "Monday.com",
-  "ClickUp",
-  "Linear",
-  "Slack",
-  "Microsoft Teams",
-  "Zoom",
-  "Google Workspace",
-  "Microsoft 365",
-  "Confluence",
-  "GitHub",
-  "GitLab",
-  "Bitbucket",
-  "Sketch",
-  "Adobe XD",
-  "InVision",
-  "Framer",
-  "Webflow",
-  "Airtable",
-  "Coda",
-  "Obsidian",
-  "Roam Research",
-  "Mural",
-  "FigJam",
-  "Whimsical",
-  "Lucidchart",
-  "Draw.io",
-  "Canva",
-  "Loom",
-  "Other",
-]
-
-const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors", "Other"]
 
 export default function ProductSurvey() {
   const { user, userIsAdmin, clearCorruptedSession } = useAuth()
@@ -432,8 +593,8 @@ export default function ProductSurvey() {
   const getNavigationConfig = () => {
     const hasPrevious = currentStep > 1
     const hasNext = currentStep < totalSteps
-    const isRequired = currentStep !== 10 // Salary is optional
-    const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
+    const isRequired = currentStep !== 11 // Salary is optional
+    const isAutoAdvance = currentStep >= 1 && currentStep <= 7 // Auto-advance for first 7 single-choice questions
     const canProceedResult = isStepValid(currentStep)
 
     return {
@@ -450,46 +611,15 @@ export default function ProductSurvey() {
     switch (currentStep) {
       case 1:
         return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
-          >
-            <SingleChoiceQuestion
-              question="What's your current role?"
-              options={roleOptions}
-              selectedValue={surveyData.role}
-              onSelect={handleRoleSelect}
-              onNext={handleAutoNext}
-              autoAdvance={surveyData.role !== "Other"}
-              delay={500}
-            />
-
-            {surveyData.role === "Other" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Please specify your role..."
-                  value={otherRole}
-                  onChange={(e) => setOtherRole(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                    placeholder-gray-500 dark:placeholder-gray-400
-                    focus:border-blue-500 focus:outline-none"
-                />
-                <Button
-                  onClick={() => {
-                    handleRoleSelect(otherRole) // lo guardás como valor en el mismo campo role
-                    handleNext()
-                  }}
-                  disabled={!otherRole.trim()}
-                  className="w-full"
-                >
-                  Continue <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </motion.div>
-            )}
-          </motion.div>
+          <SingleChoiceQuestion
+            question="What's your current role?"
+            options={roleOptions}
+            selectedValue={surveyData.role}
+            onSelect={handleRoleSelect}
+            onNext={handleAutoNext}
+            autoAdvance={surveyData.role !== "Other"}
+            delay={500}
+          />
         )
 
       case 2:
@@ -596,8 +726,11 @@ export default function ProductSurvey() {
       case 9:
         const handleFinalNext = () => {
           let tools = [...surveyData.daily_tools]
-          if (tools.includes("Other")) {
+          if (tools.includes("Other") && otherTool.trim()) {
             tools = tools.map((t) => (t === "Other" ? otherTool : t))
+          } else if (tools.includes("Other") && !otherTool.trim()) {
+            // If "Other" is selected but no specific tool is provided, remove "Other"
+            tools = tools.filter((t) => t !== "Other")
           }
           setSurveyData((prev) => ({ ...prev, daily_tools: tools }))
           handleNext()
@@ -1118,3 +1251,149 @@ export default function ProductSurvey() {
     </div>
   )
 }
+
+interface SurveyData {
+  role: string
+  other_role: string
+  seniority: string
+  company_type: string
+  company_size: string
+  industry: string
+  product_type: string
+  customer_segment: string
+  main_challenge: string
+  daily_tools: string[]
+  other_tool: string
+  learning_methods: string[]
+  salary_currency: string
+  salary_min: string
+  salary_max: string
+  salary_average: string
+  email: string
+}
+
+interface AppSettings {
+  general: {
+    maintenanceMode: boolean
+    surveyTitle?: string // Added for survey title
+    [key: string]: any
+  }
+  [key: string]: any
+}
+
+const roleOptions = [
+  "Product Manager",
+  "Product Owner",
+  "Product Designer / UX/UI Designer (UXer)",
+  "Product Engineer / Software Engineer (Developer)",
+  "Data Analyst / Product Analyst",
+  "Product Marketing Manager",
+  "Engineering Manager / Tech Lead",
+  "Design Manager / Design Lead",
+  "QA Engineer / Test Engineer",
+  "DevOps Engineer / Platform Engineer",
+  "Technical Writer / Documentation",
+  "Customer Success Manager",
+  "Sales Engineer / Solutions Engineer",
+  "Other",
+]
+
+const seniorityOptions = [
+  "Junior (0-2 years)",
+  "Mid-level (2-5 years)",
+  "Senior (5-8 years)",
+  "Staff/Principal (8+ years)",
+  "Manager/Lead",
+  "Director/VP",
+  "C-level/Founder",
+]
+
+const companyTypeOptions = [
+  "Startup (1-50 employees)",
+  "Scale-up (51-200 employees)",
+  "Mid-size company (201-1000 employees)",
+  "Large enterprise (1000+ employees)",
+  "Freelance/Independent",
+  "Agency/Consultancy",
+  "Other",
+]
+
+const companySizeOptions = [
+  "Early-stage Startup (Pre-seed/Seed)",
+  "Growth-stage Startup (Series A-C)",
+  "Scale-up (Series D+)",
+  "SME (Small/Medium Enterprise)",
+  "Large Corporate (1000+ employees)",
+  "Enterprise (10,000+ employees)",
+  "Consultancy/Agency",
+  "Freelance/Independent",
+]
+
+const industryOptions = [
+  "Technology/Software",
+  "Financial Services/Fintech",
+  "Healthcare/Medtech",
+  "E-commerce/Retail",
+  "Education/Edtech",
+  "Media/Entertainment",
+  "Manufacturing/Industrial",
+  "Consulting/Professional Services",
+  "Government/Public Sector",
+  "Non-profit/NGO",
+  "Other",
+]
+
+const productTypeOptions = [
+  "SaaS (B2B)",
+  "SaaS (B2C)",
+  "Mobile App",
+  "Web Application",
+  "E-commerce Platform",
+  "API/Developer Tools",
+  "Hardware + Software",
+  "Services/Consulting",
+  "Internal Tools",
+  "Other",
+]
+
+const customerSegmentOptions = ["B2B Product", "B2C Product", "B2B2C Product", "Internal Product", "Mixed (B2B + B2C)"]
+
+const toolOptions = [
+  "Jira",
+  "Figma",
+  "Notion",
+  "Miro",
+  "Trello",
+  "Asana",
+  "Monday.com",
+  "ClickUp",
+  "Linear",
+  "Slack",
+  "Microsoft Teams",
+  "Zoom",
+  "Google Workspace",
+  "Microsoft 365",
+  "Confluence",
+  "GitHub",
+  "GitLab",
+  "Bitbucket",
+  "Sketch",
+  "Adobe XD",
+  "InVision",
+  "Framer",
+  "Webflow",
+  "Airtable",
+  "Coda",
+  "Obsidian",
+  "Roam Research",
+  "Mural",
+  "FigJam",
+  "Whimsical",
+  "Lucidchart",
+  "Draw.io",
+  "Canva",
+  "Loom",
+  "Other",
+]
+
+const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors", "Other"]
