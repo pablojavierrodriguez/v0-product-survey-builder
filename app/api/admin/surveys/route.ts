@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: surveys, error } = await supabase
-      .from("survey_stats")
+      .from("surveys")
       .select("*")
       .order("created_at", { ascending: false })
 
@@ -18,7 +18,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, surveys: surveys || [] })
+    const surveysWithStats = await Promise.all(
+      (surveys || []).map(async (survey) => {
+        const { count, error: countError } = await supabase
+          .from("survey_responses")
+          .select("*", { count: "exact", head: true })
+          .eq("survey_id", survey.id)
+
+        if (countError) {
+          console.error(`Error counting responses for survey ${survey.id}:`, countError)
+        }
+
+        return {
+          ...survey,
+          response_count: count || 0,
+        }
+      }),
+    )
+
+    return NextResponse.json({ success: true, surveys: surveysWithStats })
   } catch (error) {
     console.error("Error in surveys API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
