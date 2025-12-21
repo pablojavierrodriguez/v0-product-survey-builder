@@ -39,7 +39,17 @@ function LoginForm() {
       const result = await signInWithPassword(email, password)
 
       if (result?.error) {
-        setError(result.error)
+        if (result.error.includes("Invalid login credentials")) {
+          setError(
+            "Invalid email or password. Please check your credentials and try again. If you don't have an account, click 'Create Account' below.",
+          )
+        } else if (result.error.includes("Email not confirmed")) {
+          setError("Please verify your email address before logging in. Check your inbox for the confirmation email.")
+        } else if (result.error.includes("User not found")) {
+          setError("No account found with this email. Click 'Create Account' to sign up.")
+        } else {
+          setError(result.error)
+        }
       } else {
         // Small delay to allow AuthProvider to update
         setTimeout(() => {
@@ -70,7 +80,7 @@ function LoginForm() {
             </div>
             <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-50">Admin Access</CardTitle>
             <CardDescription className="dark:text-slate-400 text-slate-600">
-              Access the Product Community Survey administration panel
+              Sign in with your Supabase account credentials
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -159,6 +169,19 @@ function LoginForm() {
                   Create Account
                 </Button>
               </div>
+            </div>
+
+            {/* Helpful information box for first-time users */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Authentication Information
+              </h4>
+              <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1.5 list-disc list-inside">
+                <li>Only registered Supabase users can log in</li>
+                <li>New accounts must verify their email before accessing the system</li>
+                <li>Don't have an account? Click "Create Account" below</li>
+              </ul>
             </div>
 
             <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
