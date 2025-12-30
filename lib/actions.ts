@@ -42,15 +42,16 @@ export async function signInWithPassword(email: string, password: string) {
     })
 
     if (error) {
-      console.error("[v0] Login failed:", error.message)
+      console.log("[v0] Login failed:", error.message)
       return { error: error.message }
     }
 
     console.log("[v0] Login successful for:", email)
     return { success: true }
   } catch (error) {
-    console.error("[v0] Unexpected login error:", error)
-    return { error: "An unexpected error occurred. Please try again." }
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred. Please try again."
+    console.log("[v0] Unexpected login error:", errorMessage)
+    return { error: errorMessage }
   }
 }
 
